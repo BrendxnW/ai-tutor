@@ -3,5 +3,6 @@ __pycache__
 .env
 data/*.db
 data/*.db-*
+data/uploads/
 
 Idea.txt

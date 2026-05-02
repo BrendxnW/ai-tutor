@@ -3,17 +3,29 @@ import base64
 import binascii
 import hashlib
 import hmac
+import io
 import json
 import logging
 import os
+import re
 import secrets
 import sqlite3
 import time
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from pathlib import Path
+from uuid import uuid4
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, Query, Request, WebSocket, WebSocketDisconnect
+from fastapi import (
+    FastAPI,
+    File,
+    Query,
+    Request,
+    UploadFile,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -55,6 +67,22 @@ AUTH_COOKIE_NAME = "ai_tutor_session"
 AUTH_SESSION_MAX_AGE_SECONDS = 60 * 60 * 12
 PASSWORD_HASH_ITERATIONS = 210_000
 streak_service = StreakService(AUTH_DATABASE_PATH)
+
+PINECONE_API_KEY = os.getenv("PINECONE_API_KEY", "").strip()
+PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME", "ai-tutor-content").strip()
+PINECONE_CLOUD = os.getenv("PINECONE_CLOUD", "aws").strip()
+PINECONE_REGION = os.getenv("PINECONE_REGION", "us-east-1").strip()
+PINECONE_EMBED_MODEL = os.getenv("PINECONE_EMBED_MODEL", "llama-text-embed-v2").strip()
+PINECONE_TEXT_FIELD = os.getenv("PINECONE_TEXT_FIELD", "text").strip() or "text"
+CONTENT_UPLOAD_DIR_VALUE = os.getenv("CONTENT_UPLOAD_DIR", "data/uploads")
+CONTENT_UPLOAD_DIR = Path(CONTENT_UPLOAD_DIR_VALUE).expanduser()
+if not CONTENT_UPLOAD_DIR.is_absolute():
+    CONTENT_UPLOAD_DIR = BASE_DIR / CONTENT_UPLOAD_DIR
+CONTENT_MAX_UPLOAD_MB = int(os.getenv("CONTENT_MAX_UPLOAD_MB", "25"))
+CONTENT_MAX_UPLOAD_BYTES = CONTENT_MAX_UPLOAD_MB * 1024 * 1024
+CONTENT_CHUNK_WORDS = 450
+CONTENT_CHUNK_OVERLAP_WORDS = 50
+PINECONE_UPSERT_BATCH_SIZE = 96
 
 # Twilio config (optional — only needed for phone call integration)
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
@@ -101,11 +129,111 @@ async def settings(request: Request):
     return FileResponse(BASE_DIR / "frontend" / "settings.html")
 
 
+@app.get("/upload-content")
+async def upload_content_page(request: Request):
+    if not authenticated_request(request):
+        return RedirectResponse(url="/", status_code=303)
+    return FileResponse(BASE_DIR / "frontend" / "upload-content.html")
+
+
+@app.get("/settings")
+async def settings_page(request: Request):
+    if not authenticated_request(request):
+        return RedirectResponse(url="/", status_code=303)
+    return FileResponse(BASE_DIR / "frontend" / "settings.html")
+
+
 @app.get("/create-user")
 async def create_user_page(request: Request):
     if authenticated_request(request):
         return RedirectResponse(url="/home", status_code=303)
     return FileResponse(BASE_DIR / "frontend" / "create-user.html")
+
+
+@app.post("/api/content/upload-pdf")
+async def upload_pdf_content(request: Request, file: UploadFile = File(...)):
+    username = get_authenticated_request_user(request)
+    if not username:
+        return JSONResponse({"error": "Authentication required."}, status_code=401)
+
+    if not PINECONE_API_KEY:
+        return JSONResponse(
+            {
+                "error": (
+                    "PINECONE_API_KEY is not set. Add it to .env before uploading "
+                    "content to Pinecone."
+                )
+            },
+            status_code=503,
+        )
+
+    original_filename = Path(file.filename or "").name
+    if not original_filename or Path(original_filename).suffix.lower() != ".pdf":
+        return JSONResponse({"error": "Upload a PDF file."}, status_code=400)
+
+    content = await file.read()
+    if not content:
+        return JSONResponse({"error": "The uploaded PDF is empty."}, status_code=400)
+    if len(content) > CONTENT_MAX_UPLOAD_BYTES:
+        return JSONResponse(
+            {"error": f"PDF uploads are limited to {CONTENT_MAX_UPLOAD_MB} MB."},
+            status_code=413,
+        )
+
+    document_id = uuid4().hex
+    saved_path = save_uploaded_pdf(document_id, original_filename, content)
+
+    try:
+        pages = extract_pdf_pages(content)
+    except RuntimeError as error:
+        return JSONResponse(
+            {
+                "error": str(error),
+                "documentId": document_id,
+                "savedPath": str(saved_path),
+            },
+            status_code=400,
+        )
+
+    records = build_pinecone_records(
+        document_id=document_id,
+        filename=original_filename,
+        username=username,
+        saved_path=saved_path,
+        pages=pages,
+    )
+    if not records:
+        return JSONResponse(
+            {
+                "error": "No extractable text was found in the PDF.",
+                "documentId": document_id,
+                "savedPath": str(saved_path),
+            },
+            status_code=400,
+        )
+
+    try:
+        await asyncio.to_thread(upsert_records_to_pinecone, records, username)
+    except Exception as error:
+        logger.exception("Pinecone upload failed for %s", saved_path)
+        return JSONResponse(
+            {
+                "error": f"Saved PDF locally, but Pinecone upload failed: {error}",
+                "documentId": document_id,
+                "savedPath": str(saved_path),
+                "chunkCount": len(records),
+            },
+            status_code=502,
+        )
+
+    return {
+        "filename": original_filename,
+        "documentId": document_id,
+        "savedPath": str(saved_path),
+        "chunkCount": len(records),
+        "namespace": username,
+        "indexName": PINECONE_INDEX_NAME,
+    }
 
 
 @app.get("/auth/me")
@@ -306,6 +434,155 @@ def create_user(username, password):
         connection.commit()
 
 
+def save_uploaded_pdf(document_id, filename, content):
+    CONTENT_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    safe_filename = sanitize_filename(filename)
+    saved_path = CONTENT_UPLOAD_DIR / f"{document_id}-{safe_filename}"
+    saved_path.write_bytes(content)
+    return saved_path
+
+
+def sanitize_filename(filename):
+    stem = Path(filename).stem[:80] or "document"
+    suffix = Path(filename).suffix.lower() or ".pdf"
+    safe_stem = re.sub(r"[^A-Za-z0-9._-]+", "-", stem).strip(".-")
+    return f"{safe_stem or 'document'}{suffix}"
+
+
+def extract_pdf_pages(content):
+    try:
+        from pypdf import PdfReader
+    except ImportError as error:
+        raise RuntimeError(
+            "PDF extraction dependency is missing. Install requirements.txt, including pypdf."
+        ) from error
+
+    try:
+        reader = PdfReader(io.BytesIO(content))
+    except Exception as error:
+        raise RuntimeError("Could not read the uploaded PDF.") from error
+
+    pages = []
+    for page_number, page in enumerate(reader.pages, start=1):
+        try:
+            text = page.extract_text() or ""
+        except Exception:
+            logger.warning("Could not extract text from PDF page %s", page_number)
+            text = ""
+
+        normalized_text = normalize_extracted_text(text)
+        if normalized_text:
+            pages.append({"page_number": page_number, "text": normalized_text})
+
+    return pages
+
+
+def normalize_extracted_text(text):
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def build_pinecone_records(document_id, filename, username, saved_path, pages):
+    uploaded_at = datetime.now(timezone.utc).isoformat()
+    records = []
+
+    for page in pages:
+        chunks = chunk_text(page["text"])
+        for chunk_index, chunk_text_value in enumerate(chunks):
+            records.append(
+                {
+                    "_id": (
+                        f"{document_id}-p{page['page_number']}"
+                        f"-c{chunk_index}"
+                    ),
+                    PINECONE_TEXT_FIELD: chunk_text_value,
+                    "document_id": document_id,
+                    "username": username,
+                    "filename": filename,
+                    "page_number": page["page_number"],
+                    "chunk_index": chunk_index,
+                    "uploaded_at": uploaded_at,
+                    "local_path": str(saved_path),
+                }
+            )
+
+    return records
+
+
+def chunk_text(text):
+    words = text.split()
+    if not words:
+        return []
+
+    chunks = []
+    start = 0
+    while start < len(words):
+        end = min(start + CONTENT_CHUNK_WORDS, len(words))
+        chunks.append(" ".join(words[start:end]))
+        if end == len(words):
+            break
+        start = max(end - CONTENT_CHUNK_OVERLAP_WORDS, start + 1)
+    return chunks
+
+
+def upsert_records_to_pinecone(records, namespace):
+    try:
+        from pinecone import Pinecone
+    except ImportError as error:
+        raise RuntimeError(
+            "Pinecone dependency is missing. Install requirements.txt, including pinecone."
+        ) from error
+
+    pc = Pinecone(api_key=PINECONE_API_KEY)
+    ensure_pinecone_index(pc)
+    index = pc.Index(PINECONE_INDEX_NAME)
+
+    for start in range(0, len(records), PINECONE_UPSERT_BATCH_SIZE):
+        batch = records[start : start + PINECONE_UPSERT_BATCH_SIZE]
+        index.upsert_records(namespace=namespace, records=batch)
+
+
+def ensure_pinecone_index(pc):
+    if not pc.has_index(PINECONE_INDEX_NAME):
+        pc.create_index_for_model(
+            name=PINECONE_INDEX_NAME,
+            cloud=PINECONE_CLOUD,
+            region=PINECONE_REGION,
+            embed={
+                "model": PINECONE_EMBED_MODEL,
+                "metric": "cosine",
+                "field_map": {"text": PINECONE_TEXT_FIELD},
+                "write_parameters": {
+                    "input_type": "passage",
+                    "truncate": "END",
+                },
+                "read_parameters": {
+                    "input_type": "query",
+                    "truncate": "END",
+                },
+            },
+        )
+
+    wait_for_pinecone_index(pc)
+
+
+def wait_for_pinecone_index(pc):
+    for _ in range(30):
+        description = pc.describe_index(PINECONE_INDEX_NAME)
+        status = getattr(description, "status", {}) or {}
+        ready = (
+            status.get("ready")
+            if isinstance(status, dict)
+            else getattr(status, "ready", False)
+        )
+        if ready:
+            return
+        time.sleep(2)
+
+    raise RuntimeError(
+        f"Pinecone index '{PINECONE_INDEX_NAME}' was not ready after waiting."
+    )
+
+
 def get_user(username):
     if not username:
         return None
@@ -383,8 +660,12 @@ def get_authenticated_user(token):
 
 
 def authenticated_request(request: Request):
+    return get_authenticated_request_user(request) is not None
+
+
+def get_authenticated_request_user(request: Request):
     token = request.cookies.get(AUTH_COOKIE_NAME)
-    return get_authenticated_user(token) is not None
+    return get_authenticated_user(token)
 
 
 def get_request_username(request: Request):

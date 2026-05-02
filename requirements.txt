@@ -5,3 +5,5 @@ websockets
 python-dotenv
 python-multipart
 twilio
+pinecone
+pypdf

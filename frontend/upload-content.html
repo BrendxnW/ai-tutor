@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Upload Content - AI Tutor</title>
+    <link href="/static/style.css" rel="stylesheet" />
+  </head>
+
+  <body>
+    <main class="container upload-shell">
+      <header>
+        <div>
+          <p class="eyebrow">AI Tutor</p>
+          <h1>Upload Content</h1>
+        </div>
+        <nav class="dashboard-nav" aria-label="Main navigation">
+          <a href="/home">Home</a>
+          <a href="/tutor">Tutor</a>
+          <a href="/upload-content" aria-current="page">Upload Content</a>
+          <a href="/settings">Settings</a>
+        </nav>
+      </header>
+
+      <section class="upload-card" aria-labelledby="upload-title">
+        <div class="upload-heading">
+          <h2 id="upload-title">Add a PDF</h2>
+          <p>
+            The file will be saved locally, split into searchable passages, and
+            uploaded to your Pinecone namespace.
+          </p>
+        </div>
+
+        <form id="pdf-upload-form" class="upload-form">
+          <label for="pdf-file">PDF file</label>
+          <input id="pdf-file" name="file" type="file" accept="application/pdf,.pdf" required />
+          <p class="note">Maximum upload size is 25 MB by default.</p>
+
+          <button id="upload-submit" class="btn" type="submit">Upload PDF</button>
+        </form>
+
+        <p id="upload-status" class="upload-status hidden" role="status"></p>
+        <dl id="upload-result" class="upload-result hidden"></dl>
+      </section>
+
+      <footer class="footer">
+        <p>© 2025 Maxwell Whitmarsh, Brendon Wong, Nathen dela Torre, Jonathan Lee, Brendon Wong</p>
+      </footer>
+    </main>
+
+    <script src="/static/upload-content.js"></script>
+  </body>
+</html>

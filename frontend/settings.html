@@ -1,43 +1,50 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
+  <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Settings</title>
-    <link href="/static/style.css" rel="stylesheet">
-</head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Settings - AI Tutor</title>
+    <link href="/static/style.css" rel="stylesheet" />
+  </head>
 
-    <body>
+  <body>
+    <header>
+      <h1>Settings</h1>
+      <nav class="dashboard-nav" aria-label="Main navigation">
+        <a href="/home">Home</a>
+        <a href="/tutor">Tutor</a>
+        <a href="/upload-content">Upload Content</a>
+        <a href="/settings" aria-current="page">Settings</a>
+      </nav>
+    </header>
 
-        <header>
-            <h1>Settings</h1>
-        </header>
+    <main>
+      <h2>Account</h2>
+      <label>Username</label>
+      <input type="text" placeholder="username" /><br /><br />
 
-        <main>
-            <h2>Account</h2>
-            <label>Username</label>
-            <input type="text" placeholder="username" /><br/><br/>
+      <label>Email</label>
+      <input type="email" placeholder="email" /><br /><br />
 
-            <label>Email</label>
-            <input type="email" placeholder="email" /><br/><br/>
+      <label>Password</label>
+      <input type="password" placeholder="password" /><br /><br />
 
-            <label>Password</label>
-            <input type="password" placeholder="password" /><br/><br/>
+      <label>Phone Number (Optional)</label>
+      <input type="tel" placeholder="phone number" /><br /><br />
 
-            <label>Phone Number (Optional)</label>
-            <input type="tel" placeholder="phone number" /><br/><br/>
+      <h2>Preferences</h2>
+      <label>Dark Mode</label>
+      <input type="checkbox" /><br /><br />
 
-            <h2>Preferences</h2>
-            <label>Dark Mode</label>
-            <input type="checkbox" /><br/><br/>
+      <a href="/home" class="btn">Back</a>
+      <a href="/home" class="btn">Save Changes</a>
+    </main>
 
-            <a href="/home" class="btn">Back</a>
-            <a href="/home" class="btn">Save Changes</a>
-        </main>
-
-        <footer>
-            <p>© 2025 Maxwell Whitmarsh, Brendon Wong, Nathen dela Torre, Jonathan Lee, Brendon Wong</p>
-        </footer>
-
-    </body>
+    <footer>
+      <p>
+        © 2025 Maxwell Whitmarsh, Brendon Wong, Nathen dela Torre, Jonathan Lee,
+        Brendon Wong
+      </p>
+    </footer>
+  </body>
 </html>

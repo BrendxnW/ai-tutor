@@ -77,11 +77,17 @@ GEMINI_API_KEY=your_api_key_here
 AUTH_DATABASE_PATH=data/auth.db
 AUTH_BOOTSTRAP_USERNAME=your_username
 AUTH_BOOTSTRAP_PASSWORD=your_password
+PINECONE_API_KEY=your_pinecone_api_key_here
+PINECONE_TEXT_FIELD=text
 ```
 
 `AUTH_SESSION_SECRET` is optional for local development. If omitted, the app stores
 a generated session secret in the local auth database. Set it explicitly if you need
 sessions to survive database replacement or multi-instance deployments.
+
+PDF content uploads use Pinecone integrated embedding indexes. `PINECONE_TEXT_FIELD`
+must match the source text field configured on the index; Pinecone's default is
+`text`.
 
 Alternatively, you can set it in your shell:
 
