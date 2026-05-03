@@ -29,8 +29,16 @@ from fastapi import (
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
+from google.genai import types
 from gemini_live import GeminiLive
 from streaks import StreakService
+from tutor_agent import (
+    CoursePassage,
+    TutorCurriculumSession,
+    curriculum_to_dict,
+    curriculum_to_hidden_context,
+    normalize_course_search_results,
+)
 from twilio_handler import TwilioHandler
 
 # Load environment variables
@@ -74,6 +82,7 @@ PINECONE_CLOUD = os.getenv("PINECONE_CLOUD", "aws").strip()
 PINECONE_REGION = os.getenv("PINECONE_REGION", "us-east-1").strip()
 PINECONE_EMBED_MODEL = os.getenv("PINECONE_EMBED_MODEL", "llama-text-embed-v2").strip()
 PINECONE_TEXT_FIELD = os.getenv("PINECONE_TEXT_FIELD", "text").strip() or "text"
+COURSE_SEARCH_TOP_K = int(os.getenv("COURSE_SEARCH_TOP_K", "6"))
 CONTENT_UPLOAD_DIR_VALUE = os.getenv("CONTENT_UPLOAD_DIR", "data/uploads")
 CONTENT_UPLOAD_DIR = Path(CONTENT_UPLOAD_DIR_VALUE).expanduser()
 if not CONTENT_UPLOAD_DIR.is_absolute():
@@ -83,6 +92,8 @@ CONTENT_MAX_UPLOAD_BYTES = CONTENT_MAX_UPLOAD_MB * 1024 * 1024
 CONTENT_CHUNK_WORDS = 450
 CONTENT_CHUNK_OVERLAP_WORDS = 50
 PINECONE_UPSERT_BATCH_SIZE = 96
+
+CURRICULUM_PROGRESS_TOOL_NAME = "mark_curriculum_step_complete"
 
 # Twilio config (optional — only needed for phone call integration)
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
@@ -583,6 +594,37 @@ def wait_for_pinecone_index(pc):
     )
 
 
+def search_uploaded_course_passages(
+    topic: str,
+    namespace: str,
+    top_k: int = COURSE_SEARCH_TOP_K,
+) -> list[CoursePassage]:
+    if not PINECONE_API_KEY:
+        raise RuntimeError(
+            "PINECONE_API_KEY is not set. Upload and course search require Pinecone."
+        )
+
+    normalized_topic = normalize_extracted_text(topic)
+    if not normalized_topic:
+        raise ValueError("A learning topic is required before connecting.")
+
+    try:
+        from pinecone import Pinecone, SearchQuery
+    except ImportError as error:
+        raise RuntimeError(
+            "Pinecone dependency is missing. Install requirements.txt, including pinecone."
+        ) from error
+
+    pc = Pinecone(api_key=PINECONE_API_KEY)
+    index = pc.Index(PINECONE_INDEX_NAME)
+    search_response = index.search_records(
+        namespace=namespace,
+        query=SearchQuery(inputs={"text": normalized_topic}, top_k=top_k),
+        fields=[PINECONE_TEXT_FIELD, "filename", "page_number", "document_id"],
+    )
+    return normalize_course_search_results(search_response, PINECONE_TEXT_FIELD)
+
+
 def get_user(username):
     if not username:
         return None
@@ -678,6 +720,46 @@ def authenticated_websocket(websocket: WebSocket):
     return get_authenticated_user(token) is not None
 
 
+def get_authenticated_websocket_user(websocket: WebSocket):
+    token = websocket.cookies.get(AUTH_COOKIE_NAME)
+    return get_authenticated_user(token)
+
+
+def build_curriculum_progress_tools():
+    return [
+        types.Tool(
+            functionDeclarations=[
+                types.FunctionDeclaration(
+                    name=CURRICULUM_PROGRESS_TOOL_NAME,
+                    description=(
+                        "Mark a curriculum step complete after the student has "
+                        "demonstrated understanding of that exact step."
+                    ),
+                    parameters=types.Schema(
+                        type=types.Type.OBJECT,
+                        properties={
+                            "step_order": types.Schema(
+                                type=types.Type.INTEGER,
+                                minimum=1,
+                                maximum=5,
+                                description="The curriculum step number to mark complete.",
+                            ),
+                            "evidence": types.Schema(
+                                type=types.Type.STRING,
+                                description=(
+                                    "A short reason the student's latest answer shows "
+                                    "understanding."
+                                ),
+                            ),
+                        },
+                        required=["step_order"],
+                    ),
+                )
+            ]
+        )
+    ]
+
+
 async def close_for_missing_gemini_key(websocket: WebSocket):
     """Tell the browser what to fix instead of crashing the ASGI connection."""
     message = (
@@ -693,7 +775,8 @@ async def close_for_missing_gemini_key(websocket: WebSocket):
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     """WebSocket endpoint for Gemini Live."""
-    if not authenticated_websocket(websocket):
+    username = get_authenticated_websocket_user(websocket)
+    if not username:
         await websocket.close(code=1008)
         return
 
@@ -708,6 +791,8 @@ async def websocket_endpoint(websocket: WebSocket):
     audio_input_queue = asyncio.Queue()
     video_input_queue = asyncio.Queue()
     text_input_queue = asyncio.Queue()
+    curriculum_session = TutorCurriculumSession(username=username)
+    completed_curriculum_steps = set()
 
     async def audio_output_callback(data):
         await websocket.send_bytes(data)
@@ -716,9 +801,90 @@ async def websocket_endpoint(websocket: WebSocket):
         # The event queue handles the JSON message, but we might want to do something else here
         pass
 
+    def mark_curriculum_step_complete(step_order, evidence=""):
+        try:
+            normalized_step_order = int(step_order)
+        except (TypeError, ValueError):
+            return {"ok": False, "error": "step_order must be an integer."}
+
+        if normalized_step_order < 1 or normalized_step_order > 5:
+            return {"ok": False, "error": "step_order must be between 1 and 5."}
+
+        completed_curriculum_steps.add(normalized_step_order)
+        return {
+            "ok": True,
+            "step_order": normalized_step_order,
+            "evidence": str(evidence or "").strip(),
+            "completed_steps": sorted(completed_curriculum_steps),
+        }
+
     gemini_client = GeminiLive(
-        api_key=GEMINI_API_KEY, model=MODEL, input_sample_rate=16000
+        api_key=GEMINI_API_KEY,
+        model=MODEL,
+        input_sample_rate=16000,
+        tools=build_curriculum_progress_tools(),
+        tool_mapping={
+            CURRICULUM_PROGRESS_TOOL_NAME: mark_curriculum_step_complete,
+        },
     )
+
+    async def start_course_grounded_curriculum(topic, source):
+        try:
+            course_passages = await asyncio.to_thread(
+                search_uploaded_course_passages,
+                topic,
+                username,
+            )
+        except Exception as error:
+            logger.exception("Could not search uploaded course content from %s", source)
+            await websocket.send_json(
+                {
+                    "type": "error",
+                    "error": (
+                        "Could not search uploaded course content: "
+                        f"{type(error).__name__}: {error}"
+                    ),
+                }
+            )
+            return
+
+        if not course_passages:
+            await websocket.send_json(
+                {
+                    "type": "error",
+                    "error": (
+                        "No relevant uploaded course content was found for that topic. "
+                        "Upload course material first or try a topic from the uploaded PDF."
+                    ),
+                }
+            )
+            return
+
+        try:
+            curriculum = await curriculum_session.maybe_generate(topic, course_passages)
+        except Exception as error:
+            logger.exception("Could not generate tutor curriculum from %s", source)
+            await websocket.send_json(
+                {
+                    "type": "error",
+                    "error": (
+                        "Could not generate the LangChain mini-curriculum: "
+                        f"{type(error).__name__}: {error}"
+                    ),
+                }
+            )
+            return
+
+        if not curriculum:
+            return
+
+        await websocket.send_json(
+            {
+                "type": "curriculum",
+                "curriculum": curriculum_to_dict(curriculum),
+            }
+        )
+        await text_input_queue.put(curriculum_to_hidden_context(curriculum))
 
     async def receive_from_client():
         try:
@@ -736,6 +902,17 @@ async def websocket_endpoint(websocket: WebSocket):
                             image_data = base64.b64decode(payload["data"])
                             await video_input_queue.put(image_data)
                             continue
+                        if (
+                            isinstance(payload, dict)
+                            and payload.get("type") == "session_start"
+                        ):
+                            await start_course_grounded_curriculum(
+                                str(payload.get("topic") or ""),
+                                source="session_start",
+                            )
+                            continue
+                        if isinstance(payload, dict) and "text" in payload:
+                            text = str(payload.get("text") or "")
                     except json.JSONDecodeError:
                         pass
 

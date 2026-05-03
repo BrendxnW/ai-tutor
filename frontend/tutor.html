@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -12,7 +12,9 @@
         <h1>AI Tutor</h1>
         <div class="header-actions">
           <div id="status" class="status disconnected">Disconnected</div>
-          <button id="logoutBtn" class="btn secondary" type="button">Log Out</button>
+          <button id="logoutBtn" class="btn secondary" type="button">
+            Log Out
+          </button>
         </div>
       </header>
 
@@ -34,20 +36,32 @@
                 <strong>Guided Help:</strong> Hints and questions before answers
               </li>
               <li>
-                <strong>Adaptive Support:</strong> More direct help when students stay stuck
+                <strong>Adaptive Support:</strong> More direct help when
+                students stay stuck
               </li>
-
             </ul>
             <p>
               <em
-                >Note: When you connect, the tutor will introduce itself and ask
-                what you are working on.</em
+                >Note: Enter a topic from your uploaded course content. The
+                tutor will build a short plan, then start questioning you by
+                voice.</em
               >
             </p>
           </div>
-          <p>Click below to connect.</p>
-     
-          <button id="connectBtn" class="btn">Connect</button>
+
+          <div class="topic-start">
+            <label for="topicInput">What do you want to learn this session?</label>
+            <div class="topic-row">
+              <input
+                type="text"
+                id="topicInput"
+                placeholder="e.g. buffer overflow vulnerabilities"
+                autocomplete="off"
+              />
+              <button id="connectBtn" class="btn">Connect</button>
+            </div>
+            <p id="topic-error" class="form-error hidden"></p>
+          </div>
         </div>
 
         <div class="session-end-section hidden" id="session-end-section">
@@ -90,6 +104,24 @@
                 <button id="sendBtn" class="btn">Send</button>
               </div>
             </div>
+
+            <aside class="plan-panel">
+              <section
+                class="curriculum-panel hidden"
+                id="curriculum-panel"
+                aria-live="polite"
+              >
+                <div class="curriculum-header">
+                  <h2>Session plan</h2>
+                  <span id="curriculum-duration"></span>
+                </div>
+                <p id="curriculum-goal" class="curriculum-goal"></p>
+                <ol id="curriculum-steps" class="curriculum-steps"></ol>
+              </section>
+              <div id="curriculum-empty" class="curriculum-empty">
+                The plan will appear here once course content is found.
+              </div>
+            </aside>
           </div>
         </div>
       </main>

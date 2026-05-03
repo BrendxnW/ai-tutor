@@ -40,8 +40,12 @@ class GeminiClient {
     }
   }
 
-  sendText(text) {
-    this.send(JSON.stringify({ text: text }));
+  sendText(text, type = "user_text") {
+    this.send(JSON.stringify({ type: type, text: text }));
+  }
+
+  startSession(topic) {
+    this.send(JSON.stringify({ type: "session_start", topic: topic }));
   }
 
   sendImage(base64Data, mimeType = "image/jpeg") {

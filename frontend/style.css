@@ -195,6 +195,7 @@ header {
   align-items: center;
   flex-wrap: wrap;
   justify-content: flex-end;
+  flex: 1;
 }
 
 .status {
@@ -352,6 +353,91 @@ video {
   background-color: #fce8e6;
   color: #b3261e;
   border-radius: 4px;
+}
+
+.curriculum-panel {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: #fff;
+  padding: 0.75rem;
+  width: min(420px, 100%);
+}
+
+.curriculum-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.35rem;
+}
+
+.curriculum-header h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+#curriculum-duration {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.curriculum-goal {
+  margin: 0 0 0.5rem;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.curriculum-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.curriculum-steps li {
+  display: grid;
+  grid-template-columns: 1.25rem 1fr;
+  align-items: start;
+  gap: 0.4rem;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.3;
+}
+
+.curriculum-steps li.current {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.curriculum-steps li.complete {
+  color: #188038;
+}
+
+.step-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  font-weight: 800;
+  line-height: 1;
+  font-size: 0.75rem;
+}
+
+.curriculum-steps li.complete .step-status {
+  border-color: #188038;
+  background: #e6f4ea;
+}
+
+.step-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 input[type="text"],
@@ -686,6 +772,7 @@ header {
   align-items: center;
   flex-wrap: wrap;
   justify-content: flex-end;
+  flex: 1;
 }
 
 .status {
@@ -1028,5 +1115,79 @@ input[type="password"] {
 
   .streak-label {
     font-size: 10px;
+  }
+}
+
+.topic-start {
+  width: min(720px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.topic-start label {
+  font-weight: 700;
+}
+
+.topic-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  width: 100%;
+}
+
+.topic-row input {
+  min-width: 0;
+}
+
+.input-area {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.app-grid {
+  grid-template-columns: minmax(280px, 1fr) minmax(280px, 1fr) minmax(240px, 0.75fr);
+}
+
+.plan-panel {
+  display: flex;
+  min-height: 400px;
+}
+
+.curriculum-panel {
+  width: 100%;
+  align-self: stretch;
+}
+
+.curriculum-empty {
+  width: 100%;
+  min-height: 160px;
+  padding: 1rem;
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  background: var(--bg-color);
+  font-size: 0.95rem;
+}
+
+@media (max-width: 1050px) {
+  .app-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .plan-panel {
+    grid-column: 1 / -1;
+    min-height: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .topic-row,
+  .app-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .topic-row .btn {
+    width: 100%;
   }
 }
