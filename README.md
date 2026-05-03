@@ -9,6 +9,13 @@ Minerva is built to feel like a real tutor instead of a search engine. It helps 
 https://github.com/user-attachments/assets/5f7a45ce-be72-47cd-b713-d4adc06400cc
 
 
+## How to use:
+
+1. In order to use canvas, get Canvas access token from the settings and url from canvas and paste it in the settings
+2. Now you should be able to see your classes, Minerva will collect lecture data and then your able to click on one of them and then you can navigate to a specific assignment to talk to Minerva about it
+3. Your now able to talk to Minerva about your specific assignment to help your understanding
+4. If you want to upload a file instead, your able to in the custom tab, upload file, click upload pdf, type what you want to talk about, and then start session
+
 
 ## Tech Stack
 
