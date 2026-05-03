@@ -7,13 +7,7 @@ const sessionEndSection = document.getElementById("session-end-section");
 const sessionEndMessage = document.getElementById("session-end-message");
 const restartBtn = document.getElementById("restartBtn");
 const micBtn = document.getElementById("micBtn");
-const cameraBtn = document.getElementById("cameraBtn");
-const screenBtn = document.getElementById("screenBtn");
 const disconnectBtn = document.getElementById("disconnectBtn");
-const textInput = document.getElementById("textInput");
-const sendBtn = document.getElementById("sendBtn");
-const videoPreview = document.getElementById("video-preview");
-const videoPlaceholder = document.getElementById("video-placeholder");
 const connectBtn = document.getElementById("connectBtn");
 const topicInput = document.getElementById("topicInput");
 const pdfStatusSpan = document.getElementById("pdf-status");
@@ -26,6 +20,14 @@ const curriculumEmpty = document.getElementById("curriculum-empty");
 const curriculumGoal = document.getElementById("curriculum-goal");
 const curriculumDuration = document.getElementById("curriculum-duration");
 const curriculumSteps = document.getElementById("curriculum-steps");
+const courseIndexSection = document.getElementById("course-index-section");
+const courseIndexMessage = document.getElementById("course-index-message");
+const courseIndexStatus = document.getElementById("course-index-status");
+const courseIndexFiles = document.getElementById("course-index-files");
+const courseIndexChunks = document.getElementById("course-index-chunks");
+const assignmentPicker = document.getElementById("assignment-picker");
+const assignmentSelect = document.getElementById("assignmentSelect");
+const assignmentSummary = document.getElementById("assignment-summary");
 
 let currentGeminiMessageDiv = null;
 let currentUserMessageDiv = null;
@@ -34,7 +36,16 @@ let currentCurriculum = null;
 let pendingSessionTopic = "";
 let pendingCanvasUrl = "";
 let pendingCanvasToken = "";
+let pendingNamespace = "";
+let pendingAssignment = null;
+let selectedCourseId = getSelectedCourseId();
+let courseAssignments = [];
 const completedCurriculumSteps = new Set();
+
+function getSelectedCourseId() {
+  const match = window.location.pathname.match(/^\/tutor\/([^/]+)$/);
+  return match ? decodeURIComponent(match[1]) : "";
+}
 
 function updateConnectionStatus(pdfConnected, canvasConnected) {
   pdfStatusSpan.textContent = pdfConnected ? "Connected" : "Not connected";
@@ -86,7 +97,13 @@ const geminiClient = new GeminiClient({
     statusDiv.className = "status connected";
     authSection.classList.add("hidden");
     appSection.classList.remove("hidden");
-    geminiClient.startSession(pendingSessionTopic, pendingCanvasUrl, pendingCanvasToken);
+    geminiClient.startSession(
+      pendingSessionTopic,
+      pendingCanvasUrl,
+      pendingCanvasToken,
+      pendingNamespace,
+      pendingAssignment,
+    );
   },
   onMessage: (event) => {
     if (typeof event.data === "string") {
@@ -124,10 +141,13 @@ async function requireTutorAuth() {
     const result = await response.json();
     if (!result.authenticated) {
       window.location.href = "/";
+      return false;
     }
+    return true;
   } catch (error) {
     console.error("Could not check auth state:", error);
     window.location.href = "/";
+    return false;
   }
 }
 
@@ -251,30 +271,223 @@ function markCurriculumStepComplete(stepOrder) {
   }
 }
 
+async function prepareSelectedCourse() {
+  if (!selectedCourseId) {
+    return;
+  }
+
+  authSection.classList.add("hidden");
+  courseIndexSection.classList.remove("hidden");
+  statusDiv.textContent = "Preparing...";
+  statusDiv.className = "status connecting";
+  setCourseIndexStatus({
+    status: "indexing",
+    indexedFileCount: 0,
+    chunkCount: 0,
+    message: "Checking Canvas course PDFs...",
+  });
+
+  try {
+    const response = await fetch(`/api/canvas/courses/${encodeURIComponent(selectedCourseId)}/index`, {
+      method: "POST",
+    });
+    const result = await response.json();
+
+    if (response.status === 401) {
+      window.location.href = "/";
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error(result.error || "Could not prepare this Canvas course.");
+    }
+
+    handleCourseIndexResult(result);
+  } catch (error) {
+    showCourseIndexError(error.message || "Could not prepare this Canvas course.");
+  }
+}
+
+async function pollSelectedCourseStatus() {
+  if (!selectedCourseId) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/canvas/courses/${encodeURIComponent(selectedCourseId)}/index/status`);
+    const result = await response.json();
+
+    if (response.status === 401) {
+      window.location.href = "/";
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error(result.error || "Could not check course indexing status.");
+    }
+
+    handleCourseIndexResult(result);
+  } catch (error) {
+    showCourseIndexError(error.message || "Could not check course indexing status.");
+  }
+}
+
+function handleCourseIndexResult(result) {
+  setCourseIndexStatus(result);
+
+  if (result.status === "ready") {
+    pendingNamespace = result.namespace || "";
+    courseIndexSection.classList.add("hidden");
+    authSection.classList.remove("hidden");
+    updateConnectionStatus(true, true);
+    statusDiv.textContent = "Ready";
+    statusDiv.className = "status connected";
+    loadCourseAssignments();
+    topicInput.focus();
+    return;
+  }
+
+  if (result.status === "indexing") {
+    window.setTimeout(pollSelectedCourseStatus, 2000);
+    return;
+  }
+
+  if (result.status === "empty") {
+    statusDiv.textContent = "No PDFs Found";
+    statusDiv.className = "status disconnected";
+    return;
+  }
+
+  if (result.status === "failed") {
+    showCourseIndexError(result.message || "Canvas course indexing failed.");
+  }
+}
+
+function setCourseIndexStatus(result) {
+  courseIndexStatus.textContent = result.status || "Starting";
+  courseIndexFiles.textContent = String(result.indexedFileCount || 0);
+  courseIndexChunks.textContent = String(result.chunkCount || 0);
+  courseIndexMessage.textContent = result.message || "Preparing course content...";
+}
+
+function showCourseIndexError(message) {
+  courseIndexMessage.textContent = message;
+  courseIndexStatus.textContent = "Failed";
+  statusDiv.textContent = "Course Prep Failed";
+  statusDiv.className = "status error";
+}
+
+function summarizeAssignment(assignment) {
+  if (!assignment) return "";
+
+  const details = [];
+  if (assignment.due_at) details.push(`Due ${assignment.due_at}`);
+  if (assignment.points_possible !== null && assignment.points_possible !== undefined) {
+    details.push(`${assignment.points_possible} points`);
+  }
+  if (assignment.description) {
+    const description = assignment.description.length > 180
+      ? `${assignment.description.slice(0, 177)}...`
+      : assignment.description;
+    details.push(description);
+  }
+
+  return details.join(" · ");
+}
+
+function getSelectedAssignment() {
+  if (!assignmentSelect) return null;
+  const selectedId = assignmentSelect.value;
+  if (!selectedId) return null;
+  return courseAssignments.find((assignment) => String(assignment.id) === selectedId) || null;
+}
+
+function renderCourseAssignments(assignments) {
+  courseAssignments = Array.isArray(assignments) ? assignments : [];
+  if (!assignmentPicker || !assignmentSelect) return;
+
+  assignmentSelect.innerHTML = "";
+  const emptyOption = document.createElement("option");
+  emptyOption.value = "";
+  emptyOption.textContent = "Choose an assignment...";
+  assignmentSelect.appendChild(emptyOption);
+
+  courseAssignments.forEach((assignment) => {
+    const option = document.createElement("option");
+    option.value = String(assignment.id);
+    option.textContent = assignment.name || `Assignment ${assignment.id}`;
+    assignmentSelect.appendChild(option);
+  });
+
+  assignmentPicker.classList.toggle("hidden", courseAssignments.length === 0);
+  if (assignmentSummary) {
+    assignmentSummary.textContent = "";
+    assignmentSummary.classList.add("hidden");
+  }
+}
+
+async function loadCourseAssignments() {
+  if (!selectedCourseId || !assignmentPicker) return;
+
+  try {
+    const response = await fetch(`/api/canvas/courses/${encodeURIComponent(selectedCourseId)}/assignments`);
+    const result = await response.json();
+
+    if (response.status === 401) {
+      window.location.href = "/";
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error(result.error || "Could not load Canvas assignments.");
+    }
+
+    renderCourseAssignments(result.assignments);
+  } catch (error) {
+    console.error("Could not load Canvas assignments:", error);
+    renderCourseAssignments([]);
+  }
+}
+
+if (assignmentSelect) {
+  assignmentSelect.onchange = () => {
+    const assignment = getSelectedAssignment();
+    if (!assignmentSummary) return;
+
+    const summary = summarizeAssignment(assignment);
+    assignmentSummary.textContent = summary;
+    assignmentSummary.classList.toggle("hidden", !summary);
+  };
+}
+
 // Connect Button Handler
 connectBtn.onclick = async () => {
   const topic = topicInput.value.trim();
+  const assignment = getSelectedAssignment();
 
   pendingSessionTopic = topic;
+  pendingAssignment = assignment;
   topicError.textContent = "";
   topicError.classList.add("hidden");
   statusDiv.textContent = "Connecting...";
   statusDiv.className = "status connecting";
   connectBtn.disabled = true;
 
-  // Fetch saved Canvas settings
   let canvasUrl = "";
   let canvasToken = "";
-  try {
-    const response = await fetch('/api/settings');
-    if (response.ok) {
-      const data = await response.json();
-      const settings = data.settings || {};
-      canvasUrl = settings.canvas_url || "";
-      canvasToken = settings.canvas_token || "";
+
+  if (!pendingNamespace) {
+    try {
+      const response = await fetch('/api/settings');
+      if (response.ok) {
+        const data = await response.json();
+        const settings = data.settings || {};
+        canvasUrl = settings.canvas_url || "";
+        canvasToken = settings.canvas_token || "";
+      }
+    } catch (error) {
+      console.error('Failed to load settings:', error);
     }
-  } catch (error) {
-    console.error('Failed to load settings:', error);
   }
 
   pendingCanvasUrl = canvasUrl;
@@ -283,7 +496,12 @@ connectBtn.onclick = async () => {
   const canvasProvided = Boolean(canvasUrl && canvasToken);
   let canvasConnected = false;
 
-  if (canvasProvided) {
+  if (pendingNamespace) {
+    setCanvasConnectionStatus({
+      text: "Connected",
+      className: "connected",
+    });
+  } else if (canvasProvided) {
     canvasConnected = await verifyCanvasConnection(canvasUrl, canvasToken);
     setCanvasConnectionStatus({
       text: canvasConnected ? "Connected" : "Not connected",
@@ -304,13 +522,17 @@ connectBtn.onclick = async () => {
   }
 
   try {
-    // Initialize audio context on user gesture
-    await mediaHandler.initializeAudio();
-
+    statusDiv.textContent = "Starting microphone...";
+    await startMicrophoneCapture();
+    statusDiv.textContent = "Connecting...";
     geminiClient.connect();
   } catch (error) {
     console.error("Connection error:", error);
-    statusDiv.textContent = "Connection Failed: " + error.message;
+    mediaHandler.stopAudio();
+    micBtn.textContent = "Start Mic";
+    topicError.textContent = error.message || "Microphone access is required to start the tutor.";
+    topicError.classList.remove("hidden");
+    statusDiv.textContent = "Microphone required";
     statusDiv.className = "status error";
     connectBtn.disabled = false;
   }
@@ -325,6 +547,17 @@ disconnectBtn.onclick = () => {
   geminiClient.disconnect();
 };
 
+async function startMicrophoneCapture() {
+  if (mediaHandler.isRecording) return;
+
+  await mediaHandler.startAudio((data) => {
+    if (geminiClient.isConnected()) {
+      geminiClient.send(data);
+    }
+  });
+  micBtn.textContent = "Stop Mic";
+}
+
 micBtn.onclick = async () => {
   if (mediaHandler.isRecording) {
     mediaHandler.stopAudio();
@@ -334,115 +567,28 @@ micBtn.onclick = async () => {
       if (!geminiClient.isConnected()) {
         throw new Error("Connect to the tutor before starting the mic.");
       }
-      await mediaHandler.startAudio((data) => {
-        if (geminiClient.isConnected()) {
-          geminiClient.send(data);
-        }
-      });
-      micBtn.textContent = "Stop Mic";
+      await startMicrophoneCapture();
     } catch (e) {
       alert(e.message || "Could not start audio capture");
     }
   }
 };
 
-if (cameraBtn) {
-  cameraBtn.onclick = async () => {
-    if (cameraBtn.textContent === "Stop Camera") {
-      mediaHandler.stopVideo(videoPreview);
-      cameraBtn.textContent = "Start Camera";
-      if (screenBtn) screenBtn.textContent = "Share Screen";
-      videoPlaceholder.classList.remove("hidden");
-    } else {
-      // If another stream is active (e.g. Screen), stop it first
-      if (mediaHandler.videoStream) {
-        mediaHandler.stopVideo(videoPreview);
-        if (screenBtn) screenBtn.textContent = "Share Screen";
-      }
-
-      try {
-        await mediaHandler.startVideo(videoPreview, (base64Data) => {
-          if (geminiClient.isConnected()) {
-            geminiClient.sendImage(base64Data);
-          }
-        });
-        cameraBtn.textContent = "Stop Camera";
-        if (screenBtn) screenBtn.textContent = "Share Screen";
-        videoPlaceholder.classList.add("hidden");
-      } catch (e) {
-        alert(e.message || "Could not access camera");
-      }
-    }
-  };
-}
-
-if (screenBtn) {
-  screenBtn.onclick = async () => {
-    if (screenBtn.textContent === "Stop Sharing") {
-      mediaHandler.stopVideo(videoPreview);
-      screenBtn.textContent = "Share Screen";
-      if (cameraBtn) cameraBtn.textContent = "Start Camera";
-      videoPlaceholder.classList.remove("hidden");
-    } else {
-      // If another stream is active (e.g. Camera), stop it first
-      if (mediaHandler.videoStream) {
-        mediaHandler.stopVideo(videoPreview);
-        if (cameraBtn) cameraBtn.textContent = "Start Camera";
-      }
-
-      try {
-        await mediaHandler.startScreen(
-          videoPreview,
-          (base64Data) => {
-            if (geminiClient.isConnected()) {
-              geminiClient.sendImage(base64Data);
-            }
-          },
-          () => {
-            // onEnded callback (e.g. user stopped sharing from browser)
-            screenBtn.textContent = "Share Screen";
-            videoPlaceholder.classList.remove("hidden");
-          }
-        );
-        screenBtn.textContent = "Stop Sharing";
-        if (cameraBtn) cameraBtn.textContent = "Start Camera";
-        videoPlaceholder.classList.add("hidden");
-      } catch (e) {
-        alert(e.message || "Could not share screen");
-      }
-    }
-  };
-}
-
-sendBtn.onclick = sendText;
-textInput.onkeypress = (e) => {
-  if (e.key === "Enter") sendText();
-};
-
-function sendText() {
-  const text = textInput.value;
-  if (text && geminiClient.isConnected()) {
-    geminiClient.sendText(text);
-    appendMessage("user", text);
-    textInput.value = "";
-  }
-}
-
 function resetUI() {
   authSection.classList.remove("hidden");
+  if (courseIndexSection) courseIndexSection.classList.add("hidden");
   appSection.classList.add("hidden");
   sessionEndSection.classList.add("hidden");
 
   mediaHandler.stopAudio();
-  mediaHandler.stopVideo(videoPreview);
-  videoPlaceholder.classList.remove("hidden");
 
   micBtn.textContent = "Start Mic";
-  if (cameraBtn) cameraBtn.textContent = "Start Camera";
-  if (screenBtn) screenBtn.textContent = "Share Screen";
   chatLog.innerHTML = "";
   currentCurriculum = null;
   pendingSessionTopic = "";
+  pendingCanvasUrl = "";
+  pendingCanvasToken = "";
+  pendingAssignment = null;
   completedCurriculumSteps.clear();
   curriculumPanel.classList.add("hidden");
   curriculumEmpty.classList.remove("hidden");
@@ -463,24 +609,32 @@ function showSessionEnd() {
   sessionEndMessage.textContent = lastErrorMessage;
   sessionEndMessage.classList.toggle("hidden", !lastErrorMessage);
   mediaHandler.stopAudio();
-  mediaHandler.stopVideo(videoPreview);
 }
 
 restartBtn.onclick = () => {
   resetUI();
 };
 
-logoutBtn.onclick = async () => {
-  geminiClient.disconnect();
-  resetUI();
+if (logoutBtn) {
+  logoutBtn.onclick = async () => {
+    geminiClient.disconnect();
+    resetUI();
 
-  try {
-    await fetch("/auth/logout", { method: "POST" });
-  } catch (error) {
-    console.error("Logout error:", error);
-  } finally {
-    window.location.href = "/";
+    try {
+      await fetch("/auth/logout", { method: "POST" });
+    } catch (error) {
+      console.error("Logout error:", error);
+    } finally {
+      window.location.href = "/";
+    }
+  };
+}
+
+async function initializeTutorPage() {
+  const authenticated = await requireTutorAuth();
+  if (authenticated) {
+    prepareSelectedCourse();
   }
-};
+}
 
-requireTutorAuth();
+initializeTutorPage();

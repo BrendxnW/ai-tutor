@@ -3,43 +3,71 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI Tutor</title>
+    <title>Minerva</title>
+    <script>
+      try {
+        document.documentElement.dataset.theme =
+          localStorage.getItem("darkMode") === "true" ? "dark" : "light";
+      } catch (error) {
+        document.documentElement.dataset.theme = "light";
+      }
+    </script>
     <link rel="stylesheet" href="/static/style.css" />
   </head>
-  <body>
+  <body class="app-page">
     <div class="container">
       <header>
         <div>
-        <p>AI Tutor</p>
-        <h1>Tutor</h1>
+          <p class="eyebrow">Minerva</p>
+          <h1>Tutor</h1>
         </div>
-        
+
         <div class="header-actions">
           <div id="status" class="status disconnected">Disconnected</div>
           <nav class="dashboard-nav" aria-label="Main navigation">
             <a href="/home">Home</a>
-            <a href="/tutor" aria-current="page">Tutor</a>
-            <a href="/upload-content">Upload Content</a>
             <a href="/store">Store</a>
             <a href="/settings">Settings</a>
           </nav>
+          <div class="nav-progress" aria-label="Progress summary">
+            <div class="nav-progress-item">
+              <span class="nav-progress-icon" aria-hidden="true">🔥</span>
+              <span class="nav-progress-label">Streak</span>
+              <span id="current-streak" class="nav-progress-value">0</span>
+            </div>
+            <div class="nav-progress-item coins-progress">
+              <span class="nav-progress-icon" aria-hidden="true">🪙</span>
+              <span class="nav-progress-label">Coins</span>
+              <span id="current-coins" class="nav-progress-value">0</span>
+            </div>
+          </div>
         </div>
       </header>
 
       <main>
+        <div class="course-index-section hidden" id="course-index-section">
+          <h2>Preparing course content</h2>
+          <p id="course-index-message">Checking Canvas course PDFs...</p>
+          <dl class="course-index-meta">
+            <div>
+              <dt>Status</dt>
+              <dd id="course-index-status">Starting</dd>
+            </div>
+            <div>
+              <dt>Files</dt>
+              <dd id="course-index-files">0</dd>
+            </div>
+            <div>
+              <dt>Chunks</dt>
+              <dd id="course-index-chunks">0</dd>
+            </div>
+          </dl>
+        </div>
+
         <div class="auth-section" id="auth-section">
-          <div
-            class="description-box"
-            style="
-              margin-bottom: 20px;
-              padding: 15px;
-              background: #f5f5f5;
-              border-radius: 8px;
-              text-align: left;
-            "
-          >
+          <div class="description-box">
             <h3>Tutoring Approach:</h3>
-            <ul style="margin: 10px 0 20px 20px">
+            <ul>
               <li>
                 <strong>Guided Help:</strong> Hints and questions before answers
               </li>
@@ -59,6 +87,14 @@
           </div>
 
           <div class="topic-start">
+            <div class="assignment-picker hidden" id="assignment-picker">
+              <label for="assignmentSelect">Canvas assignment</label>
+              <select id="assignmentSelect">
+                <option value="">Choose an assignment...</option>
+              </select>
+              <p id="assignment-summary" class="assignment-summary hidden"></p>
+            </div>
+
             <label for="topicInput">What do you want to learn this session?</label>
             <div class="topic-row">
               <input
@@ -67,7 +103,7 @@
                 placeholder="e.g. buffer overflow vulnerabilities"
                 autocomplete="off"
               />
-              <button id="connectBtn" class="btn">Connect</button>
+              <button id="connectBtn" class="btn">Start Session</button>
             </div>
             <p id="topic-error" class="form-error hidden"></p>
 
@@ -93,34 +129,18 @@
 
         <div class="app-section hidden" id="app-section">
           <div class="app-grid">
-            <div class="left-panel">
-              <div class="video-container">
-                <div id="video-placeholder">Start camera to send video</div>
-                <video id="video-preview" autoplay playsinline muted></video>
-                <canvas id="video-canvas" style="display: none"></canvas>
-              </div>
+            <div class="right-panel">
+              <div class="chat-log" id="chat-log"></div>
+            </div>
 
-              <div class="controls">
+            <aside class="plan-panel">
+              <div class="controls session-controls" aria-label="Session controls">
                 <button id="micBtn" class="btn icon-btn">Start Mic</button>
                 <button id="disconnectBtn" class="btn icon-btn danger">
                   Disconnect
                 </button>
               </div>
-            </div>
 
-            <div class="right-panel">
-              <div class="chat-log" id="chat-log"></div>
-              <div class="input-area">
-                <input
-                  type="text"
-                  id="textInput"
-                  placeholder="Ask for a hint..."
-                />
-                <button id="sendBtn" class="btn">Send</button>
-              </div>
-            </div>
-
-            <aside class="plan-panel">
               <section
                 class="curriculum-panel hidden"
                 id="curriculum-panel"
@@ -143,6 +163,7 @@
     </div>
     <script src="/static/media-handler.js"></script>
     <script src="/static/gemini-client.js"></script>
+    <script src="/static/home.js"></script>
     <script src="/static/main.js"></script>
     <script src="/static/darkmode.js"></script>
   </body>

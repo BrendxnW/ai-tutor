@@ -210,6 +210,14 @@ function renderContentItems(items) {
 
     details.append(title, meta);
 
+    const actions = document.createElement("div");
+    actions.className = "content-actions";
+
+    const tutorLink = document.createElement("a");
+    tutorLink.className = "link-btn content-tutor";
+    tutorLink.href = "/tutor";
+    tutorLink.textContent = "Open Tutor";
+
     const deleteButton = document.createElement("button");
     deleteButton.className = "btn danger content-delete";
     deleteButton.type = "button";
@@ -217,7 +225,8 @@ function renderContentItems(items) {
     deleteButton.dataset.deleteDocumentId = item.documentId;
     deleteButton.dataset.filename = item.filename || item.documentId;
 
-    contentItem.append(details, deleteButton);
+    actions.append(tutorLink, deleteButton);
+    contentItem.append(details, actions);
     contentList.append(contentItem);
   }
 }

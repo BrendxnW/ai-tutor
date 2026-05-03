@@ -44,8 +44,15 @@ class GeminiClient {
     this.send(JSON.stringify({ type: type, text: text }));
   }
 
-  startSession(topic, canvasUrl = "", canvasToken = "") {
-    this.send(JSON.stringify({ type: "session_start", topic: topic, canvas_url: canvasUrl, canvas_token: canvasToken }));
+  startSession(topic, canvasUrl = "", canvasToken = "", namespace = "", assignment = null) {
+    this.send(JSON.stringify({
+      type: "session_start",
+      topic: topic,
+      canvas_url: canvasUrl,
+      canvas_token: canvasToken,
+      namespace: namespace,
+      assignment: assignment,
+    }));
   }
 
   sendImage(base64Data, mimeType = "image/jpeg") {

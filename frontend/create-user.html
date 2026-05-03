@@ -3,15 +3,25 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Create User - AI Tutor</title>
+    <title>Create User - Minerva</title>
+    <script>
+      try {
+        document.documentElement.dataset.theme =
+          localStorage.getItem("darkMode") === "true" ? "dark" : "light";
+      } catch (error) {
+        document.documentElement.dataset.theme = "light";
+      }
+    </script>
     <link rel="stylesheet" href="/static/style.css" />
   </head>
   <body class="login-page">
     <main class="login-shell">
       <section class="login-card" aria-labelledby="create-user-title">
-        <div class="login-heading">
-          <p class="eyebrow">AI Tutor</p>
-          <h1 id="create-user-title">Create user</h1>
+        <div class="auth-card-top">
+          <div class="login-heading">
+            <p class="eyebrow">Minerva</p>
+            <h1 id="create-user-title">Create user</h1>
+          </div>
         </div>
 
         <form id="create-user-form" class="login-form">

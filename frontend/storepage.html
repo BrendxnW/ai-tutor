@@ -4,25 +4,53 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Store Page</title>
+    <script>
+      try {
+        document.documentElement.dataset.theme =
+          localStorage.getItem("darkMode") === "true" ? "dark" : "light";
+      } catch (error) {
+        document.documentElement.dataset.theme = "light";
+      }
+    </script>
     <link href="/static/style.css" rel="stylesheet" />
   </head>
-  <body>
-    <div class="container">
+  <body class="app-page">
+    <div class="container store-shell">
       <header>
-        <h1>Store Page</h1>
+        <div>
+          <p class="eyebrow">Minerva</p>
+          <h1>Store</h1>
+        </div>
         <div class="header-actions">
           <nav class="dashboard-nav" aria-label="Store navigation">
             <a href="/home">Home</a>
-            <a href="/tutor">Tutor</a>
-            <a href="/upload-content">Upload Content</a>
-            <a href="/storepage" aria-current="page">Store</a>
+            <a href="/store" aria-current="page">Store</a>
             <a href="/settings">Settings</a>
           </nav>
+          <div class="nav-progress" aria-label="Progress summary">
+            <div class="nav-progress-item">
+              <span class="nav-progress-icon" aria-hidden="true">🔥</span>
+              <span class="nav-progress-label">Streak</span>
+              <span id="current-streak" class="nav-progress-value">0</span>
+            </div>
+            <div class="nav-progress-item coins-progress">
+              <span class="nav-progress-icon" aria-hidden="true">🪙</span>
+              <span class="nav-progress-label">Coins</span>
+              <span id="current-coins" class="nav-progress-value">0</span>
+            </div>
+          </div>
         </div>
       </header>
 
       <main>
-        <p>Store coming soon!</p>
+        <section class="store-card" aria-labelledby="store-title">
+          <p class="eyebrow">Rewards</p>
+          <h2 id="store-title">Store coming soon</h2>
+          <p>
+            Future rewards will live here. For now, your coins and streaks are
+            ready in the nav.
+          </p>
+        </section>
       </main>
 
     </div>

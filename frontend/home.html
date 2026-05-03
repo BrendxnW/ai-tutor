@@ -3,61 +3,61 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Home - AI Tutor</title>
+    <title>Home - Minerva</title>
+    <script>
+      try {
+        document.documentElement.dataset.theme =
+          localStorage.getItem("darkMode") === "true" ? "dark" : "light";
+      } catch (error) {
+        document.documentElement.dataset.theme = "light";
+      }
+    </script>
     <link href="/static/style.css" rel="stylesheet" />
   </head>
 
-  <body>
-   
+  <body class="app-page">
     <main class="container dashboard-shell">
       <header>
         <div>
-          <p class="eyebrow">AI Tutor</p>
+          <p class="eyebrow">Minerva</p>
           <h1>Dashboard</h1>
         </div>
-        <nav class="dashboard-nav" aria-label="Main navigation">
-          <a href="/home" aria-current="page">Home</a>
-          <a href="/tutor">Tutor</a>
-          <a href="/upload-content">Upload Content</a>
-          <a href="/store">Store</a>
-          <a href="/settings">Settings</a>
-        </nav>
+        <div class="header-actions">
+          <nav class="dashboard-nav" aria-label="Main navigation">
+            <a href="/home" aria-current="page">Home</a>
+            <a href="/store">Store</a>
+            <a href="/settings">Settings</a>
+          </nav>
+          <div class="nav-progress" aria-label="Progress summary">
+            <div class="nav-progress-item">
+              <span class="nav-progress-icon" aria-hidden="true">🔥</span>
+              <span class="nav-progress-label">Streak</span>
+              <span id="current-streak" class="nav-progress-value">0</span>
+            </div>
+            <div class="nav-progress-item coins-progress">
+              <span class="nav-progress-icon" aria-hidden="true">🪙</span>
+              <span class="nav-progress-label">Coins</span>
+              <span id="current-coins" class="nav-progress-value">0</span>
+            </div>
+          </div>
+        </div>
       </header>
 
-      <section class="streak-container" aria-label="Progress summary">
-        <div class="streak-badge">
-          <span class="streak-icon">🔥</span>
-          <div class="streak-info">
-            <p class="streak-label">Current Streak</p>
-            <p id="current-streak" class="streak-number">0</p>
-            <p id="longest-streak" class="streak-detail">Best: 0</p>
+      <section class="courses-section" aria-labelledby="canvas-courses-title">
+        <div class="courses-heading">
+          <div>
+            <p class="eyebrow">Canvas</p>
+            <h2 id="canvas-courses-title">Courses</h2>
           </div>
         </div>
-
-        <div class="streak-badge coins-badge">
-          <span class="streak-icon">🪙</span>
-          <div class="streak-info">
-            <p class="streak-label">Coins</p>
-            <p id="current-coins" class="streak-number">0</p>
-          </div>
-        </div>
+        <p id="canvas-courses-status" class="courses-status">Loading Canvas courses...</p>
+        <div id="canvas-courses-list" class="courses-list" aria-live="polite"></div>
       </section>
 
-      <section class="dashboard-actions" aria-label="Dashboard actions">
-        <a class="action-panel" href="/tutor">
-          <span class="action-title">Start tutoring</span>
-          <span class="action-copy"
-            >Open the live tutor workspace for voice, text, camera, and screen
-            help.</span
-          >
-        </a>
-        <a class="action-panel" href="/upload-content">
-          <span class="action-title">Upload content</span>
-          <span class="action-copy"
-            >Add PDF course material to the local content store and Pinecone
-            vector index.</span
-          >
-        </a>
+      <section class="custom-section">
+        <div class="custom-card">
+          <a href="/upload-content" class="link-btn">Custom</a>
+        </div>
       </section>
 
       <footer class="footer">
@@ -70,6 +70,5 @@
 
     <script src="/static/home.js"></script>
     <script src="/static/darkmode.js"></script>
-    
   </body>
 </html>

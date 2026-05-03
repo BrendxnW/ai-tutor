@@ -30,7 +30,7 @@ class CoursePassage(BaseModel):
 
 
 CURRICULUM_SYSTEM_PROMPT = """
-You are the planning agent for a realtime AI tutor.
+You are the planning agent for a realtime Minerva.
 
 Create a tiny tutoring curriculum that can be completed in a few minutes.
 The live tutor will use this plan to teach one micro-step at a time.
