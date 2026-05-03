@@ -1010,7 +1010,29 @@ input[type="password"] {
   }
   20%, 24%, 55% {
     opacity: 0.8;
-  }
+
+body.dark {
+    background-color: #1a1a1a;
+    color: #f0f0f0;
+}
+
+body.dark header,
+body.dark footer,
+body.dark nav {
+    background-color: #2a2a2a;
+    border-color: #444;
+}
+
+body.dark .use-case-card {
+    background-color: #2a2a2a;
+    border-color: #444;
+}
+
+body.dark input {
+    background-color: #333;
+    color: #f0f0f0;
+    border-color: #555;
+}  }
 }
 
 @media (max-width: 768px) {
