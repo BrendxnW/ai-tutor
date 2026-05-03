@@ -7,17 +7,50 @@ import sys
 import sqlite3
 from pathlib import Path
 from src.config import AUTH_DATABASE_PATH
+from src.database import initialize_auth_database
 
 
 def get_connection():
     """Get a connection to the database."""
-    return sqlite3.connect(AUTH_DATABASE_PATH)
+    initialize_auth_database()
+    conn = sqlite3.connect(AUTH_DATABASE_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def list_usernames():
+    """List account usernames that can actually log in."""
+    with get_connection() as conn:
+        rows = conn.execute("SELECT username FROM users ORDER BY username").fetchall()
+    return [row["username"] for row in rows]
+
+
+def require_existing_user(username):
+    """Prevent editing a coin row for the wrong case or a non-login account."""
+    with get_connection() as conn:
+        row = conn.execute(
+            "SELECT username FROM users WHERE username = ?",
+            (username,),
+        ).fetchone()
+
+    if row:
+        return row["username"]
+
+    usernames = list_usernames()
+    lower_username = username.lower()
+    close_matches = [name for name in usernames if name.lower() == lower_username]
+    message = f"User '{username}' does not exist in {AUTH_DATABASE_PATH}."
+    if close_matches:
+        message += f" Did you mean: {', '.join(close_matches)}?"
+    elif usernames:
+        message += f" Existing users: {', '.join(usernames)}"
+    raise ValueError(message)
 
 
 def get_user_balance(username):
     """Get the current balance for a user."""
+    require_existing_user(username)
     with get_connection() as conn:
-        conn.row_factory = sqlite3.Row
         row = conn.execute(
             "SELECT username, balance, updated_at FROM user_coins WHERE username = ?",
             (username,),
@@ -31,6 +64,7 @@ def get_user_balance(username):
 def set_balance(username, balance):
     """Set a specific balance for a user."""
     import time
+    require_existing_user(username)
     balance = int(balance)
     now = int(time.time())
     
@@ -53,6 +87,7 @@ def set_balance(username, balance):
 def add_coins(username, amount):
     """Add coins to a user's balance."""
     import time
+    require_existing_user(username)
     amount = int(amount)
     now = int(time.time())
     
@@ -90,10 +125,17 @@ def subtract_coins(username, amount):
 def interactive_mode():
     """Run the script in interactive mode."""
     print("\n=== AI Tutor Coin Editor ===\n")
+    print(f"Editing database: {AUTH_DATABASE_PATH}\n")
     
     username = input("Enter username: ").strip()
     if not username:
         print("Error: Username cannot be empty")
+        return
+
+    try:
+        require_existing_user(username)
+    except ValueError as error:
+        print(f"Error: {error}")
         return
     
     # Check if user exists
@@ -161,42 +203,52 @@ def main():
     elif len(sys.argv) >= 2:
         # Command line mode
         command = sys.argv[1].lower()
-        
-        if command == "get" and len(sys.argv) == 3:
-            username = sys.argv[2]
-            result = get_user_balance(username)
-            if result:
-                print(f"{username}: {result['balance']} coins")
+
+        try:
+            if command == "users" and len(sys.argv) == 2:
+                print("Users:")
+                for username in list_usernames():
+                    print(f"  {username}")
+
+            elif command == "get" and len(sys.argv) == 3:
+                username = sys.argv[2]
+                result = get_user_balance(username)
+                if result:
+                    print(f"{username}: {result['balance']} coins")
+                else:
+                    print(f"{username}: 0 coins (no entry)")
+
+            elif command == "set" and len(sys.argv) == 4:
+                username = sys.argv[2]
+                balance = sys.argv[3]
+                result = set_balance(username, balance)
+                print(f"✓ {username}: {result['balance']} coins")
+
+            elif command == "add" and len(sys.argv) == 4:
+                username = sys.argv[2]
+                amount = sys.argv[3]
+                result = add_coins(username, amount)
+                print(f"✓ {username}: {result['balance']} coins")
+
+            elif command == "subtract" and len(sys.argv) == 4:
+                username = sys.argv[2]
+                amount = sys.argv[3]
+                result = subtract_coins(username, amount)
+                print(f"✓ {username}: {result['balance']} coins")
+
             else:
-                print(f"{username}: 0 coins (no entry)")
-        
-        elif command == "set" and len(sys.argv) == 4:
-            username = sys.argv[2]
-            balance = sys.argv[3]
-            result = set_balance(username, balance)
-            print(f"✓ {username}: {result['balance']} coins")
-        
-        elif command == "add" and len(sys.argv) == 4:
-            username = sys.argv[2]
-            amount = sys.argv[3]
-            result = add_coins(username, amount)
-            print(f"✓ {username}: {result['balance']} coins")
-        
-        elif command == "subtract" and len(sys.argv) == 4:
-            username = sys.argv[2]
-            amount = sys.argv[3]
-            result = subtract_coins(username, amount)
-            print(f"✓ {username}: {result['balance']} coins")
-        
-        else:
-            print("Usage:")
-            print("  Interactive mode:")
-            print("    python updateCoins.py")
-            print("\n  Command line mode:")
-            print("    python updateCoins.py get <username>")
-            print("    python updateCoins.py set <username> <balance>")
-            print("    python updateCoins.py add <username> <amount>")
-            print("    python updateCoins.py subtract <username> <amount>")
+                print("Usage:")
+                print("  Interactive mode:")
+                print("    python3 updateCoins.py")
+                print("\n  Command line mode:")
+                print("    python3 updateCoins.py users")
+                print("    python3 updateCoins.py get <username>")
+                print("    python3 updateCoins.py set <username> <balance>")
+                print("    python3 updateCoins.py add <username> <amount>")
+                print("    python3 updateCoins.py subtract <username> <amount>")
+                sys.exit(1)
+        except ValueError as error:
+            print(f"Error: {error}")
             sys.exit(1)
 
 

@@ -1,19 +1,19 @@
-# Minerva - Gemini Live API
+# Minerva - AI Tutor
 
-A real-time tutoring assistant using the [Google Gen AI Python SDK](https://github.com/googleapis/python-genai) for the backend and vanilla JavaScript for the frontend. The agent is configured to guide students with questions and hints first, then provide more direct help when they remain stuck.
+Minerva is built to feel like a real tutor instead of a search engine. It helps students in the exact moment they’re stuck, using their own course materials, while guiding them toward understanding rather than just giving answers. Minerva is a real-time voice tutoring app. Students upload PDFs or connect to their Canvas, then start a live session. The tutor (powered by Gemini Live) talks through problems, asks check-in questions, and teaches step by step. It also uses Pinecone to ground responses in course content, builds small learning plans, tracks progress, and rewards users with coins they can spend in a small in-app store.
 
 
 ## Demo Video
 
-
+https://www.youtube.com/watch?v=fK1BtW3sitw
 
 ## Tech Stack
 
-- Gemini API
-- Pinecone API
-- Canvas API
-- Python
-- HTML/CSS/Javascript
+- Backend: FastAPI, Python, WebSockets
+- AI: Gemini Live + LangChain
+- Retrieval: Pinecone
+- Database: SQLite
+- Frontend: HTML, CSS, JavaScript
 
 ## AI Disclosure
 
