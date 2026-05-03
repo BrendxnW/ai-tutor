@@ -81,6 +81,11 @@ PINECONE_API_KEY=your_pinecone_api_key_here
 PINECONE_TEXT_FIELD=text
 ```
 
+`MODEL` controls the Gemini Live session and defaults to
+`gemini-2.5-flash-native-audio-preview-12-2025`. The LangChain mini-curriculum
+generator uses `TUTOR_AGENT_MODEL` when set and otherwise defaults to
+`gemini-2.5-flash`.
+
 `AUTH_SESSION_SECRET` is optional for local development. If omitted, the app stores
 a generated session secret in the local auth database. Set it explicitly if you need
 sessions to survive database replacement or multi-instance deployments.

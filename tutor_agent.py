@@ -259,8 +259,7 @@ def get_tutor_agent_model_name() -> str:
     configured_model = (
         os.getenv("TUTOR_AGENT_MODEL")
         or os.getenv("TUTOR_MODEL")
-        or os.getenv("MODEL")
-        or "gemini-3.1-flash"
+        or "gemini-2.5-flash"
     ).strip()
     if configured_model.endswith("-live-preview"):
         return configured_model[: -len("-live-preview")]

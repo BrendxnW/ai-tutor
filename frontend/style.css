@@ -1191,8 +1191,10 @@ input[type="password"] {
     opacity: 0.8;
 
 body.dark {
-    background-color: #1a1a1a;
-    color: #f0f0f0;
+    --bg-color: #1a1a1a;
+    --text-primary: #f0f0f0;
+    --surface-color: #2a2a2a;
+    --border-color: #444;
 }
 
 body.dark header,
