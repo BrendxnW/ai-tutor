@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Home - Minerva</title>
+    <link rel="icon" href="/static/public/owl.ico" />
     <link href="/static/css/style.css" rel="stylesheet" />
   </head>
 
@@ -11,14 +12,17 @@
     <main class="container dashboard-shell">
       <header>
         <div>
-          <p class="eyebrow">Minerva</p>
+          <div class="brand">
+            <img class="brand-icon" src="/static/images/owl.png" alt="Minerva owl" />
+            <p class="eyebrow">Minerva</p>
+          </div>
           <h1>Dashboard</h1>
         </div>
         <div class="header-actions">
           <nav class="dashboard-nav" aria-label="Main navigation">
             <a href="/home" aria-current="page">Home</a>
             <a href="/store">Store</a>
-            <a href="/farm">Farm</a>
+
             <a href="/settings">Settings</a>
           </nav>
           <div class="nav-progress" aria-label="Progress summary">
@@ -53,6 +57,18 @@
         </div>
       </section>
 
+      <section class="farm-card" aria-labelledby="dashboard-farm-title">
+        <div class="farm-heading">
+          <div>
+            <p class="eyebrow">Your Collection</p>
+            <h2 id="dashboard-farm-title">Animal Farm</h2>
+            <p>Every animal you unlock in the store will live here.</p>
+          </div>
+        </div>
+        <p id="farm-status" class="store-status" role="status">Loading farm...</p>
+        <div id="farm-animals" class="farm-grid" aria-live="polite"></div>
+      </section>
+
       <footer class="footer">
         <p>
           © 2026 Maxwell Whitmarsh, Brendon Wong, Nathen dela Torre, Jonathan Lee.
@@ -61,6 +77,7 @@
     </main>
 
     <script src="/static/jss/home.js"></script>
+    <script src="/static/jss/farm.js"></script>
     <script src="/static/jss/dark-mode.js"></script>
   </body>
 </html>

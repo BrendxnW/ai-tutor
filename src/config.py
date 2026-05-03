@@ -8,7 +8,7 @@ FRONTEND_DIR = BASE_DIR / "frontend"
 
 load_dotenv(BASE_DIR / ".env")
 
-DEFAULT_PORT = 8001
+DEFAULT_PORT = 8000
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
 MODEL = os.getenv("MODEL", "gemini-3.1-flash-live-preview")

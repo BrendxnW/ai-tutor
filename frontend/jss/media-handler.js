@@ -27,7 +27,7 @@ class MediaHandler {
         window.webkitAudioContext)();
       if (!this.audioContext.audioWorklet) {
         throw new Error(
-          "Audio worklets are unavailable. Open the app from http://localhost:8001 in a modern browser."
+          "Audio worklets are unavailable. Open the app from http://localhost:8000 in a modern browser."
         );
       }
       await this.audioContext.audioWorklet.addModule(
@@ -215,7 +215,7 @@ class MediaHandler {
   getMediaDevices() {
     if (!window.isSecureContext) {
       throw new Error(
-        "Camera and microphone need a secure page. Use http://localhost:8001 locally or HTTPS when hosted."
+        "Camera and microphone need a secure page. Use http://localhost:8000 locally or HTTPS when hosted."
       );
     }
 
@@ -247,7 +247,7 @@ class MediaHandler {
       DevicesNotFoundError: `No ${deviceName} was found. Check that one is connected and enabled.`,
       NotReadableError: `The ${deviceName} is already in use or the system blocked access to it.`,
       TrackStartError: `The ${deviceName} is already in use or the system blocked access to it.`,
-      SecurityError: `${deviceName} access is blocked on this page. Use http://localhost:8001 locally or HTTPS when hosted.`,
+      SecurityError: `${deviceName} access is blocked on this page. Use http://localhost:8000 locally or HTTPS when hosted.`,
       AbortError: `${deviceName} access failed before it could start. Try again after closing other apps using it.`,
       OverconstrainedError: `The requested ${deviceName} settings are not available on this device.`,
     };

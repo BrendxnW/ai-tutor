@@ -6,6 +6,7 @@ A real-time tutoring assistant using the [Google Gen AI Python SDK](https://gith
 ## Demo Video
 
 
+
 ## Tech Stack
 
 - Gemini API
@@ -20,7 +21,7 @@ This project was developed with the assistance of AI tools, including Codex and 
 
 ## Track Selection
 
-This project is designed for the Google Gemini Track
+This project is designed for the Google Gemini Track where we used the gemini ai to promote learning by using voice commands, tracking streaks each day, and rewarding users with coins to by mascots to there account. Minerva Ai also has features with uploading files and full support for canvas.
 
 ## Quick Start
 
@@ -42,13 +43,13 @@ uv run python main.py
 
 Open your browser and navigate to:
 
-[http://localhost:8001](http://localhost:8001)
+[http://localhost:8000](http://localhost:8000)
 
 The landing page is a login screen. New users can create an account at:
 
-[http://localhost:8001/create-user](http://localhost:8001/create-user)
+[http://localhost:8000/create-user](http://localhost:8000/create-user)
 
 After logging in, the tutor is available at:
 
-[http://localhost:8001/tutor](http://localhost:8001/tutor)
+[http://localhost:8000/tutor](http://localhost:8000/tutor)
 
