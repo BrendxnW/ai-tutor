@@ -2,22 +2,14 @@
 
 A real-time tutoring assistant using the [Google Gen AI Python SDK](https://github.com/googleapis/python-genai) for the backend and vanilla JavaScript for the frontend. The agent is configured to guide students with questions and hints first, then provide more direct help when they remain stuck.
 
-## What Did We Build?
-We built a real time, voice interactive, Minerva that keeps track of 
-
-## Purpose
-
-
-## How
-
 
 ## Demo Video
 
 
 ## Tech Stack
 
-- Gemini
-- Pinecone
+- Gemini API
+- Pinecone API
 - Canvas API
 - Python
 - HTML/CSS/Javascript
@@ -28,7 +20,7 @@ The development of this project was assisted with AI tools such as Codex and Cla
 
 ## Track Selection
 
-This project is designed for the Gemini Track
+This project is designed for the Google Gemini Track
 
 ## Quick Start
 

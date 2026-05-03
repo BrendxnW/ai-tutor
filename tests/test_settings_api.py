@@ -70,6 +70,30 @@ class SettingsApiTest(unittest.TestCase):
                     },
                 )
 
+    def test_legacy_auth_login_route_still_sets_session_cookie(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            database_path = Path(temp_dir) / "auth.db"
+            with patch.object(main, "AUTH_DATABASE_PATH", database_path), patch.object(
+                main, "AUTH_SESSION_SECRET", "test-session-secret"
+            ):
+                main.initialize_auth_database()
+                main.create_user("student", "password")
+                client = TestClient(main.app)
+
+                response = client.post(
+                    "/auth/login",
+                    json={"username": "student", "password": "password"},
+                )
+
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.json(), {"authenticated": True})
+                self.assertIn(main.AUTH_COOKIE_NAME, response.cookies)
+
+                response = client.get("/auth/me")
+
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.json(), {"authenticated": True})
+
 
 class FakeCanvasResponse:
     def __init__(self, status_code, payload, links=None, content=b""):

@@ -104,6 +104,7 @@ const geminiClient = new GeminiClient({
       pendingNamespace,
       pendingAssignment,
     );
+    startMicrophoneCaptureAfterConnect();
   },
   onMessage: (event) => {
     if (typeof event.data === "string") {
@@ -137,7 +138,7 @@ const geminiClient = new GeminiClient({
 
 async function requireTutorAuth() {
   try {
-    const response = await fetch("/auth/me");
+    const response = await fetch("/api/auth/me");
     const result = await response.json();
     if (!result.authenticated) {
       window.location.href = "/";
@@ -522,8 +523,6 @@ connectBtn.onclick = async () => {
   }
 
   try {
-    statusDiv.textContent = "Starting microphone...";
-    await startMicrophoneCapture();
     statusDiv.textContent = "Connecting...";
     geminiClient.connect();
   } catch (error) {
@@ -556,6 +555,23 @@ async function startMicrophoneCapture() {
     }
   });
   micBtn.textContent = "Stop Mic";
+}
+
+async function startMicrophoneCaptureAfterConnect() {
+  try {
+    await startMicrophoneCapture();
+  } catch (error) {
+    console.error("Microphone startup failed:", error);
+    mediaHandler.stopAudio();
+    micBtn.textContent = "Start Mic";
+    topicError.textContent =
+      error.message || "Microphone access failed. The tutor is still connected.";
+    topicError.classList.remove("hidden");
+    appendMessage("error", topicError.textContent);
+    if (statusDiv.textContent === "Planning...") {
+      statusDiv.textContent = "Connected";
+    }
+  }
 }
 
 micBtn.onclick = async () => {
@@ -621,7 +637,7 @@ if (logoutBtn) {
     resetUI();
 
     try {
-      await fetch("/auth/logout", { method: "POST" });
+      await fetch("/api/auth/logout", { method: "POST" });
     } catch (error) {
       console.error("Logout error:", error);
     } finally {

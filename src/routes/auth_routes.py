@@ -22,6 +22,7 @@ router = APIRouter()
 
 
 @router.get("/api/auth/me")
+@router.get("/auth/me")
 async def auth_me(request: Request):
     return {"authenticated": authenticated_request(request)}
 
@@ -47,6 +48,7 @@ async def get_current_coins(request: Request):
 
 
 @router.post("/api/auth/login")
+@router.post("/auth/login")
 async def auth_login(request: Request):
     initialize_auth_database()
 
@@ -80,6 +82,7 @@ async def auth_login(request: Request):
 
 
 @router.post("/api/auth/register")
+@router.post("/auth/register")
 async def auth_register(request: Request):
     initialize_auth_database()
 
@@ -118,6 +121,7 @@ async def auth_register(request: Request):
 
 
 @router.post("/api/auth/logout")
+@router.post("/auth/logout")
 async def auth_logout():
     response = JSONResponse({"authenticated": False})
     response.delete_cookie(AUTH_COOKIE_NAME, path="/", samesite="lax")

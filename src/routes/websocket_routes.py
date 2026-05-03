@@ -6,7 +6,7 @@ import logging
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from ..auth import get_authenticated_websocket_user
-from ..config import GEMINI_API_KEY, MODEL, PINECONE_API_KEY
+from ..config import CURRICULUM_PROGRESS_TOOL_NAME, GEMINI_API_KEY, MODEL, PINECONE_API_KEY
 from ..database import coin_service, streak_service
 from ..gemini_live import GeminiLive
 from ..safegaurd import SafeGaurd

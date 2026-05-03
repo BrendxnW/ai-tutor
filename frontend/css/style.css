@@ -606,6 +606,10 @@ select:hover {
   font-weight: 800;
 }
 
+.upload-tutor-action {
+  width: 100%;
+}
+
 .custom-card {
   display: flex;
   justify-content: center;
@@ -1227,9 +1231,7 @@ select:hover {
 
   .topic-row .btn,
   .chat-input .btn,
-  .upload-heading .link-btn,
   .content-actions,
-  .content-tutor,
   .content-delete {
     width: 100%;
   }

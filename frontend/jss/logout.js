@@ -6,7 +6,7 @@ if (logoutButton) {
     logoutButton.textContent = "Logging out...";
 
     try {
-      await fetch("/auth/logout", { method: "POST" });
+      await fetch("/api/auth/logout", { method: "POST" });
     } catch (error) {
       console.error("Logout error:", error);
     } finally {
