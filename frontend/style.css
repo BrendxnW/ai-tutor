@@ -1047,6 +1047,7 @@ input[type="password"] {
   align-items: center;
   gap: 12px;
   background: linear-gradient(135deg, #fff44f 0%, #ffb74d 100%);
+
   padding: 12px 20px;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(255, 179, 77, 0.3);
@@ -1123,7 +1124,9 @@ body.dark input {
     background-color: #333;
     color: #f0f0f0;
     border-color: #555;
-}  }
+}
+
+  }
 }
 
 @media (max-width: 768px) {

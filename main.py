@@ -30,6 +30,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from gemini_live import GeminiLive
+from safegaurd import SafeGaurd
 from streaks import StreakService
 from twilio_handler import TwilioHandler
 
@@ -67,6 +68,7 @@ AUTH_COOKIE_NAME = "ai_tutor_session"
 AUTH_SESSION_MAX_AGE_SECONDS = 60 * 60 * 12
 PASSWORD_HASH_ITERATIONS = 210_000
 streak_service = StreakService(AUTH_DATABASE_PATH)
+safegaurd = SafeGaurd()
 
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY", "").strip()
 PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME", "ai-tutor-content").strip()
@@ -937,7 +939,17 @@ async def websocket_endpoint(websocket: WebSocket):
                     except json.JSONDecodeError:
                         pass
 
-                    await text_input_queue.put(text)
+                    user_text = safegaurd.extract_text(text)
+                    validation = safegaurd.validate_text(user_text)
+                    if not validation["allowed"]:
+                        logger.info("Blocked non-education Gemini prompt: %s", user_text)
+                        await websocket.send_json({
+                            "type": "error",
+                            "error": validation["message"],
+                        })
+                        continue
+
+                    await text_input_queue.put(user_text)
         except WebSocketDisconnect:
             logger.info("WebSocket disconnected")
         except Exception as e:
