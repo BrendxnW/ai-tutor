@@ -6,7 +6,7 @@ const loginSubmit = document.getElementById("login-submit");
 
 async function redirectIfAuthenticated() {
   try {
-    const response = await fetch("/auth/me");
+    const response = await fetch("/api/auth/me");
     const result = await response.json();
     if (result.authenticated) {
       window.location.href = "/home";
@@ -33,7 +33,7 @@ loginForm.addEventListener("submit", async (event) => {
   loginSubmit.textContent = "Logging in...";
 
   try {
-    const response = await fetch("/auth/login", {
+    const response = await fetch("/api/auth/login", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

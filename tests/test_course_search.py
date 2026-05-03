@@ -3,7 +3,7 @@ import types
 import unittest
 from unittest.mock import patch
 
-import main
+import src.main as main
 
 
 class CourseSearchTest(unittest.TestCase):

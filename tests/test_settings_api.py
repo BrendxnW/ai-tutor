@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, patch
 
 from fastapi.testclient import TestClient
 
-import main
+import src.main as main
 
 
 def create_legacy_user_database(database_path, username="student"):
@@ -69,6 +69,64 @@ class SettingsApiTest(unittest.TestCase):
                         "canvas_token": "token-123",
                     },
                 )
+
+    def test_legacy_auth_login_route_still_sets_session_cookie(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            database_path = Path(temp_dir) / "auth.db"
+            with patch.object(main, "AUTH_DATABASE_PATH", database_path), patch.object(
+                main, "AUTH_SESSION_SECRET", "test-session-secret"
+            ):
+                main.initialize_auth_database()
+                main.create_user("student", "password")
+                client = TestClient(main.app)
+
+                response = client.post(
+                    "/auth/login",
+                    json={"username": "student", "password": "password"},
+                )
+
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.json(), {"authenticated": True})
+                self.assertIn(main.AUTH_COOKIE_NAME, response.cookies)
+
+                response = client.get("/auth/me")
+
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.json(), {"authenticated": True})
+
+    def test_store_purchase_spends_coins_and_marks_item_owned(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            database_path = Path(temp_dir) / "auth.db"
+            with patch.object(main, "AUTH_DATABASE_PATH", database_path), patch.object(
+                main, "AUTH_SESSION_SECRET", "test-session-secret"
+            ), patch.object(main.coin_service, "database_path", database_path):
+                main.initialize_auth_database()
+                main.create_user("student", "password")
+                main.coin_service.award_correct_answer("student", multiplier=10)
+                token = main.create_session_token("student")
+                client = TestClient(main.app)
+                client.cookies.set(main.AUTH_COOKIE_NAME, token)
+
+                response = client.get("/api/store")
+
+                self.assertEqual(response.status_code, 200)
+                store = response.json()
+                self.assertEqual(store["balance"], 10)
+                self.assertTrue(any(item["emoji"] == "🐱" for item in store["items"]))
+
+                response = client.post("/api/store/purchase", json={"item_id": "cat"})
+
+                self.assertEqual(response.status_code, 200)
+                purchase = response.json()
+                self.assertEqual(purchase["balance"], 5)
+                self.assertEqual(purchase["item"]["emoji"], "🐱")
+                self.assertTrue(purchase["item"]["owned"])
+
+                response = client.get("/api/store")
+
+                self.assertEqual(response.status_code, 200)
+                cat = next(item for item in response.json()["items"] if item["id"] == "cat")
+                self.assertTrue(cat["owned"])
 
 
 class FakeCanvasResponse:
@@ -626,6 +684,19 @@ class CanvasCoursesApiTest(unittest.TestCase):
 
                 self.assertEqual(response.status_code, 200)
                 self.assertIn("Tutor", response.text)
+
+    def test_create_user_page_does_not_redirect_authenticated_user(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            database_path = Path(temp_dir) / "auth.db"
+            with patch.object(main, "AUTH_DATABASE_PATH", database_path), patch.object(
+                main, "AUTH_SESSION_SECRET", "test-session-secret"
+            ):
+                client = self.build_client(database_path)
+
+                response = client.get("/create-user")
+
+                self.assertEqual(response.status_code, 200)
+                self.assertIn("Create user", response.text)
 
     def test_canvas_course_index_requires_pinecone_key(self):
         with tempfile.TemporaryDirectory() as temp_dir:

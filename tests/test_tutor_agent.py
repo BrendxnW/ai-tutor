@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 from pydantic import ValidationError
 
-from tutor_agent import (
+from src.tutor_agent import (
     CoursePassage,
     TutorCurriculum,
     TutorCurriculumSession,
