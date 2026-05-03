@@ -43,7 +43,7 @@ source .venv/bin/activate
 uv pip install -r requirements.txt
 
 # Start the server
-uv run main.py
+uv run python main.py
 ```
 
 ### 2. Frontend
@@ -74,19 +74,24 @@ After logging in, the tutor is available at:
 
 ```
 /
-├── main.py             # FastAPI server & WebSocket endpoint
-├── gemini_live.py      # Gemini Live API wrapper using Gen AI SDK
+├── main.py             # Compatibility launcher
+├── src/
+│   ├── main.py         # FastAPI server & WebSocket endpoint
+│   └── gemini_live.py  # Gemini Live API wrapper using Gen AI SDK
 ├── requirements.txt    # Python dependencies
 └── frontend/
     ├── index.html      # Login page
     ├── create-user.html # Create user page
     ├── tutor.html      # Tutor interface
-    ├── create-user.js  # Create user page logic
-    ├── login.js        # Login page logic
-    ├── main.js         # Tutor application logic
-    ├── gemini-client.js # WebSocket client for backend communication
-    ├── media-handler.js # Audio/Video capture and playback
-    └── pcm-processor.js # AudioWorklet for PCM processing
+    ├── css/
+    │   └── style.css   # Shared styles
+    └── jss/
+        ├── create-user.js  # Create user page logic
+        ├── login.js        # Login page logic
+        ├── main.js         # Tutor application logic
+        ├── gemini-client.js # WebSocket client for backend communication
+        ├── media-handler.js # Audio/Video capture and playback
+        └── pcm-processor.js # AudioWorklet for PCM processing
 ```
 
 ## Configuration

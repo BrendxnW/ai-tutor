@@ -10,7 +10,7 @@ class FrontendAssignmentFlowTest(unittest.TestCase):
         upload_html = (BASE_DIR / "frontend" / "upload-content.html").read_text(
             encoding="utf-8"
         )
-        upload_js = (BASE_DIR / "frontend" / "upload-content.js").read_text(
+        upload_js = (BASE_DIR / "frontend" / "jss" / "upload-content.js").read_text(
             encoding="utf-8"
         )
 
@@ -26,10 +26,10 @@ class FrontendAssignmentFlowTest(unittest.TestCase):
         self.assertIn('id="assignment-summary"', tutor_html)
 
     def test_session_start_payload_includes_assignment(self):
-        gemini_client = (BASE_DIR / "frontend" / "gemini-client.js").read_text(
+        gemini_client = (BASE_DIR / "frontend" / "jss" / "gemini-client.js").read_text(
             encoding="utf-8"
         )
-        main_js = (BASE_DIR / "frontend" / "main.js").read_text(encoding="utf-8")
+        main_js = (BASE_DIR / "frontend" / "jss" / "main.js").read_text(encoding="utf-8")
 
         self.assertIn("assignment = null", gemini_client)
         self.assertIn("assignment: assignment", gemini_client)

@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, patch
 
 from fastapi.testclient import TestClient
 
-import main
+import src.main as main
 
 
 def create_legacy_user_database(database_path, username="student"):

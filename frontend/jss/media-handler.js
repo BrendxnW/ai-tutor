@@ -31,7 +31,7 @@ class MediaHandler {
         );
       }
       await this.audioContext.audioWorklet.addModule(
-        "/static/pcm-processor.js"
+        "/static/jss/pcm-processor.js"
       );
     }
     if (this.audioContext.state === "suspended") {
