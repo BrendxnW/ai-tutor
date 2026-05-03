@@ -15,25 +15,31 @@ const sendBtn = document.getElementById("sendBtn");
 const videoPreview = document.getElementById("video-preview");
 const videoPlaceholder = document.getElementById("video-placeholder");
 const connectBtn = document.getElementById("connectBtn");
+const topicInput = document.getElementById("topicInput");
+const topicError = document.getElementById("topic-error");
 const chatLog = document.getElementById("chat-log");
 const logoutBtn = document.getElementById("logoutBtn");
+const curriculumPanel = document.getElementById("curriculum-panel");
+const curriculumEmpty = document.getElementById("curriculum-empty");
+const curriculumGoal = document.getElementById("curriculum-goal");
+const curriculumDuration = document.getElementById("curriculum-duration");
+const curriculumSteps = document.getElementById("curriculum-steps");
 
 let currentGeminiMessageDiv = null;
 let currentUserMessageDiv = null;
 let lastErrorMessage = "";
+let currentCurriculum = null;
+let pendingSessionTopic = "";
+const completedCurriculumSteps = new Set();
 
 const mediaHandler = new MediaHandler();
 const geminiClient = new GeminiClient({
   onOpen: () => {
-    statusDiv.textContent = "Connected";
+    statusDiv.textContent = "Planning...";
     statusDiv.className = "status connected";
     authSection.classList.add("hidden");
     appSection.classList.remove("hidden");
-
-    // Ask the tutor to greet the student once the live session is ready.
-    geminiClient.sendText(
-      `Greet the student as their tutor. Briefly explain that you will guide them with questions and hints first, then give more direct help if they stay stuck. Ask what they are working on.`
-    );
+    geminiClient.startSession(pendingSessionTopic);
   },
   onMessage: (event) => {
     if (typeof event.data === "string") {
@@ -91,6 +97,10 @@ function handleJsonMessage(msg) {
   } else if (msg.type === "turn_complete") {
     currentGeminiMessageDiv = null;
     currentUserMessageDiv = null;
+  } else if (msg.type === "curriculum") {
+    renderCurriculum(msg.curriculum);
+  } else if (msg.type === "tool_call") {
+    handleToolCall(msg);
   } else if (msg.type === "user") {
     if (currentUserMessageDiv) {
       currentUserMessageDiv.textContent += msg.text;
@@ -117,8 +127,88 @@ function appendMessage(type, text) {
   return msgDiv;
 }
 
+function renderCurriculum(curriculum) {
+  if (!curriculum || !Array.isArray(curriculum.steps)) return;
+
+  currentCurriculum = curriculum;
+  completedCurriculumSteps.clear();
+  statusDiv.textContent = "Connected";
+  statusDiv.className = "status connected";
+  curriculumPanel.classList.remove("hidden");
+  curriculumEmpty.classList.add("hidden");
+  curriculumGoal.textContent = curriculum.session_goal || "";
+  curriculumDuration.textContent = curriculum.estimated_minutes
+    ? `${curriculum.estimated_minutes} min`
+    : "";
+
+  curriculumSteps.innerHTML = "";
+  curriculum.steps.forEach((step, index) => {
+    const item = document.createElement("li");
+    item.className = index === 0 ? "current" : "";
+    item.dataset.stepOrder = String(step.order);
+
+    const status = document.createElement("span");
+    status.className = "step-status";
+    status.textContent = index === 0 ? "•" : "";
+
+    const text = document.createElement("span");
+    text.className = "step-text";
+    text.textContent = step.title;
+
+    item.append(status, text);
+    curriculumSteps.appendChild(item);
+  });
+}
+
+function handleToolCall(msg) {
+  if (msg.name !== "mark_curriculum_step_complete") return;
+
+  const stepOrder = Number(msg.args?.step_order || msg.result?.step_order);
+  if (!Number.isInteger(stepOrder)) return;
+
+  markCurriculumStepComplete(stepOrder);
+}
+
+function markCurriculumStepComplete(stepOrder) {
+  completedCurriculumSteps.add(stepOrder);
+
+  const items = [...curriculumSteps.querySelectorAll("li")];
+  items.forEach((item) => {
+    const itemStepOrder = Number(item.dataset.stepOrder);
+    const status = item.querySelector(".step-status");
+
+    item.classList.toggle("complete", completedCurriculumSteps.has(itemStepOrder));
+    if (completedCurriculumSteps.has(itemStepOrder)) {
+      status.textContent = "\u2713";
+    }
+    item.classList.remove("current");
+  });
+
+  const nextItem = items.find((item) => {
+    return !completedCurriculumSteps.has(Number(item.dataset.stepOrder));
+  });
+  if (nextItem) {
+    nextItem.classList.add("current");
+    const status = nextItem.querySelector(".step-status");
+    if (status && !status.textContent) status.textContent = "•";
+  }
+}
+
 // Connect Button Handler
 connectBtn.onclick = async () => {
+  const topic = topicInput.value.trim();
+  if (!topic) {
+    topicError.textContent = "Enter a topic from your uploaded course content.";
+    topicError.classList.remove("hidden");
+    statusDiv.textContent = "Topic Required";
+    statusDiv.className = "status error";
+    topicInput.focus();
+    return;
+  }
+
+  pendingSessionTopic = topic;
+  topicError.textContent = "";
+  topicError.classList.add("hidden");
   statusDiv.textContent = "Connecting...";
   connectBtn.disabled = true;
 
@@ -133,6 +223,10 @@ connectBtn.onclick = async () => {
     statusDiv.className = "status error";
     connectBtn.disabled = false;
   }
+};
+
+topicInput.onkeypress = (e) => {
+  if (e.key === "Enter") connectBtn.click();
 };
 
 // UI Controls
@@ -249,6 +343,16 @@ function resetUI() {
   cameraBtn.textContent = "Start Camera";
   screenBtn.textContent = "Share Screen";
   chatLog.innerHTML = "";
+  currentCurriculum = null;
+  pendingSessionTopic = "";
+  completedCurriculumSteps.clear();
+  curriculumPanel.classList.add("hidden");
+  curriculumEmpty.classList.remove("hidden");
+  curriculumGoal.textContent = "";
+  curriculumDuration.textContent = "";
+  curriculumSteps.innerHTML = "";
+  topicError.textContent = "";
+  topicError.classList.add("hidden");
   lastErrorMessage = "";
   sessionEndMessage.textContent = "";
   sessionEndMessage.classList.add("hidden");
