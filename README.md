@@ -5,7 +5,10 @@ Minerva is built to feel like a real tutor instead of a search engine. It helps 
 
 ## Demo Video
 
-https://www.youtube.com/watch?v=fK1BtW3sitw
+
+https://github.com/user-attachments/assets/5f7a45ce-be72-47cd-b713-d4adc06400cc
+
+
 
 ## Tech Stack
 
