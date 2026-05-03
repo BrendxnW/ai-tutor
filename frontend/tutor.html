@@ -71,29 +71,29 @@
             </ul>
             <p>
               <em
-                >Note: Topic is optional. Gemini can still connect without a
-                PDF or Canvas token and will ask what you are working on. If
-                uploaded course material or Canvas data is available, it will
-                use that context too.</em
+                >Note: Choose a Canvas assignment to start tutoring from that
+                context, or describe what you want help with. Gemini can still
+                connect without a PDF or Canvas token and will use any uploaded
+                course material or Canvas data when available.</em
               >
             </p>
           </div>
 
           <div class="topic-start">
             <div class="assignment-picker hidden" id="assignment-picker">
-              <label for="assignmentSelect">Canvas assignment</label>
+              <label for="assignmentSelect">Select an assignment you want tutoring for</label>
               <select id="assignmentSelect">
                 <option value="">Choose an assignment...</option>
               </select>
               <p id="assignment-summary" class="assignment-summary hidden"></p>
             </div>
 
-            <label for="topicInput">What do you want to learn this session?</label>
-            <div class="topic-row">
+            <label for="topicInput" id="topicPromptLabel">Or say what you want help with</label>
+            <div class="topic-row" id="topic-row">
               <input
                 type="text"
                 id="topicInput"
-                placeholder="e.g. buffer overflow vulnerabilities"
+                placeholder="e.g. help me outline my essay"
                 autocomplete="off"
               />
               <button id="connectBtn" class="btn">Start Session</button>

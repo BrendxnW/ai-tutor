@@ -10,6 +10,8 @@ const micBtn = document.getElementById("micBtn");
 const disconnectBtn = document.getElementById("disconnectBtn");
 const connectBtn = document.getElementById("connectBtn");
 const topicInput = document.getElementById("topicInput");
+const topicPromptLabel = document.getElementById("topicPromptLabel");
+const topicRow = document.getElementById("topic-row");
 const pdfStatusSpan = document.getElementById("pdf-status");
 const canvasStatusSpan = document.getElementById("canvas-status");
 const topicError = document.getElementById("topic-error");
@@ -403,6 +405,19 @@ function getSelectedAssignment() {
   return courseAssignments.find((assignment) => String(assignment.id) === selectedId) || null;
 }
 
+function updateTopicPromptVisibility(assignment) {
+  const assignmentSelected = Boolean(assignment);
+  if (topicPromptLabel) {
+    topicPromptLabel.classList.toggle("hidden", assignmentSelected);
+  }
+  if (topicInput) {
+    topicInput.classList.toggle("hidden", assignmentSelected);
+  }
+  if (topicRow) {
+    topicRow.classList.toggle("assignment-selected", assignmentSelected);
+  }
+}
+
 function renderCourseAssignments(assignments) {
   courseAssignments = Array.isArray(assignments) ? assignments : [];
   if (!assignmentPicker || !assignmentSelect) return;
@@ -425,6 +440,7 @@ function renderCourseAssignments(assignments) {
     assignmentSummary.textContent = "";
     assignmentSummary.classList.add("hidden");
   }
+  updateTopicPromptVisibility(null);
 }
 
 async function loadCourseAssignments() {
@@ -458,13 +474,14 @@ if (assignmentSelect) {
     const summary = summarizeAssignment(assignment);
     assignmentSummary.textContent = summary;
     assignmentSummary.classList.toggle("hidden", !summary);
+    updateTopicPromptVisibility(assignment);
   };
 }
 
 // Connect Button Handler
 connectBtn.onclick = async () => {
-  const topic = topicInput.value.trim();
   const assignment = getSelectedAssignment();
+  const topic = assignment ? "" : topicInput.value.trim();
 
   pendingSessionTopic = topic;
   pendingAssignment = assignment;

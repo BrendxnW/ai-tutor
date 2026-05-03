@@ -761,6 +761,11 @@ select:hover {
   grid-template-columns: minmax(0, 1fr) auto;
 }
 
+.topic-row.assignment-selected {
+  grid-template-columns: auto;
+  justify-content: flex-start;
+}
+
 .connection-status {
   display: grid;
   gap: 8px;
