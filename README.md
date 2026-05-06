@@ -46,7 +46,7 @@ source .venv/bin/activate
 uv pip install -r requirements.txt
 
 # Start the server
-uv run python main.py
+uv run python -m src.main
 ```
 
 ### 2. Frontend
